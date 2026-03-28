@@ -1,54 +1,39 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-const SMTP_HOST = process.env.SMTP_HOST || "";
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || "587");
-const SMTP_USER = process.env.SMTP_USER || "";
-const SMTP_PASS = process.env.SMTP_PASS || "";
-const SMTP_FROM = process.env.SMTP_FROM || `Plutonium SMP <${SMTP_USER || "noreply@plutoniumsmp.net"}>`;
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+const FROM_ADDRESS = process.env.SMTP_FROM || "Plutonium SMP <noreply@plutoniumsmp.net>";
 
-const isConfigured = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
+const isConfigured = Boolean(RESEND_API_KEY);
+const resend = isConfigured ? new Resend(RESEND_API_KEY) : null;
 
-let transporter: nodemailer.Transporter | null = null;
-
-if (isConfigured) {
-  transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: SMTP_PORT === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
-  });
-
-  transporter.verify().then(() => {
-    console.log("[EMAIL] SMTP connection verified successfully");
-  }).catch((err: Error) => {
-    console.error(`[EMAIL] SMTP connection FAILED: ${err.message}`);
-    if (SMTP_HOST.includes("gmail")) {
-      console.error("[EMAIL] Gmail tip: Make sure SMTP_PASS is an App Password, not your regular Google password.");
-      console.error("[EMAIL] Generate one at: https://myaccount.google.com/apppasswords");
-    }
-  });
+if (!isConfigured) {
+  console.warn("[EMAIL] RESEND_API_KEY not set — emails will be logged to console only.");
+} else {
+  console.log("[EMAIL] Resend configured and ready.");
 }
 
 async function sendEmail(to: string, subject: string, html: string) {
   const plainText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 
-  if (!transporter) {
-    console.log(`[EMAIL - SMTP not configured] TO: ${to} | SUBJECT: ${subject}`);
+  if (!resend) {
+    console.log(`[EMAIL - not configured] TO: ${to} | SUBJECT: ${subject}`);
     console.log(`[EMAIL BODY] ${plainText}`);
     return;
   }
 
-  try {
-    await transporter.sendMail({ from: SMTP_FROM, to, subject, html });
-    console.log(`[EMAIL] Sent to ${to}: ${subject}`);
-  } catch (err: any) {
-    const message = err?.message || String(err);
-    console.error(`[EMAIL] Failed to send to ${to}: ${message}`);
-    if (message.includes("535") || message.includes("534") || message.includes("EAUTH") || message.includes("Invalid login")) {
-      console.error("[EMAIL] Fix: Update SMTP_PASS with a Gmail App Password from https://myaccount.google.com/apppasswords");
-    }
+  const { error } = await resend.emails.send({
+    from: FROM_ADDRESS,
+    to,
+    subject,
+    html,
+  });
+
+  if (error) {
+    console.error(`[EMAIL] Resend failed to send to ${to}: ${error.message}`);
     console.log(`[EMAIL FALLBACK] TO: ${to} | SUBJECT: ${subject}`);
     console.log(`[EMAIL FALLBACK BODY] ${plainText}`);
+  } else {
+    console.log(`[EMAIL] Sent to ${to}: ${subject}`);
   }
 }
 
