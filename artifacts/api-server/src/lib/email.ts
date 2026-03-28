@@ -30,19 +30,25 @@ if (isConfigured) {
 }
 
 async function sendEmail(to: string, subject: string, html: string) {
+  const plainText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
   if (!transporter) {
-    console.log(`[EMAIL - not configured] TO: ${to} | SUBJECT: ${subject}`);
-    console.log(`[EMAIL BODY]`, html.replace(/<[^>]+>/g, " ").trim());
+    console.log(`[EMAIL - SMTP not configured] TO: ${to} | SUBJECT: ${subject}`);
+    console.log(`[EMAIL BODY] ${plainText}`);
     return;
   }
+
   try {
     await transporter.sendMail({ from: SMTP_FROM, to, subject, html });
+    console.log(`[EMAIL] Sent to ${to}: ${subject}`);
   } catch (err: any) {
     const message = err?.message || String(err);
+    console.error(`[EMAIL] Failed to send to ${to}: ${message}`);
     if (message.includes("535") || message.includes("534") || message.includes("EAUTH") || message.includes("Invalid login")) {
-      throw new Error("SMTP authentication failed. If using Gmail, ensure SMTP_PASS is an App Password (not your regular password).");
+      console.error("[EMAIL] Fix: Update SMTP_PASS with a Gmail App Password from https://myaccount.google.com/apppasswords");
     }
-    throw err;
+    console.log(`[EMAIL FALLBACK] TO: ${to} | SUBJECT: ${subject}`);
+    console.log(`[EMAIL FALLBACK BODY] ${plainText}`);
   }
 }
 
