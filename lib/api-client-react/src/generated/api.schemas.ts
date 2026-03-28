@@ -18,11 +18,54 @@ export interface MessageResponse {
   message: string;
 }
 
+export type SendOtpRequestPurpose =
+  (typeof SendOtpRequestPurpose)[keyof typeof SendOtpRequestPurpose];
+
+export const SendOtpRequestPurpose = {
+  registration: "registration",
+  login: "login",
+} as const;
+
+export interface SendOtpRequest {
+  email: string;
+  purpose: SendOtpRequestPurpose;
+}
+
+export type VerifyOtpRequestPurpose =
+  (typeof VerifyOtpRequestPurpose)[keyof typeof VerifyOtpRequestPurpose];
+
+export const VerifyOtpRequestPurpose = {
+  registration: "registration",
+  login: "login",
+} as const;
+
+export interface VerifyOtpRequest {
+  email: string;
+  code: string;
+  purpose: VerifyOtpRequestPurpose;
+}
+
+export type CartCheckoutRequestItemsItem = {
+  itemId: number;
+  quantity: number;
+};
+
+export interface CartCheckoutRequest {
+  items: CartCheckoutRequestItemsItem[];
+  discordUsername?: string;
+  couponCode?: string;
+}
+
+export interface UpdateProfilePictureRequest {
+  avatarUrl: string;
+}
+
 export interface RegisterRequest {
   username: string;
   email: string;
   password: string;
   minecraftUsername?: string;
+  otpCode: string;
 }
 
 export interface LoginRequest {

@@ -5,11 +5,9 @@
  * Plutonium SMP API
  * OpenAPI spec version: 0.1.0
  */
+import type { SendOtpRequestPurpose } from "./sendOtpRequestPurpose";
 
-export interface RegisterRequest {
-  username: string;
+export interface SendOtpRequest {
   email: string;
-  password: string;
-  minecraftUsername?: string;
-  otpCode: string;
+  purpose: SendOtpRequestPurpose;
 }

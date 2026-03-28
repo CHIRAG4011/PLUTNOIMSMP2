@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, pgEnum, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -39,8 +39,23 @@ export const leaderboardTable = pgTable("leaderboard", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const otpPurposeEnum = pgEnum("otp_purpose", ["registration", "login"]);
+
+export const otpsTable = pgTable("otps", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull(),
+  code: text("code").notNull(),
+  purpose: otpPurposeEnum("purpose").notNull(),
+  verified: boolean("verified").notNull().default(false),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("otp_email_idx").on(table.email, table.purpose),
+]);
+
 export const insertAnnouncementSchema = createInsertSchema(announcementsTable).omit({ id: true, createdAt: true });
 export const insertCouponSchema = createInsertSchema(couponsTable).omit({ id: true, createdAt: true });
 export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
 export type Announcement = typeof announcementsTable.$inferSelect;
 export type Coupon = typeof couponsTable.$inferSelect;
+export type Otp = typeof otpsTable.$inferSelect;

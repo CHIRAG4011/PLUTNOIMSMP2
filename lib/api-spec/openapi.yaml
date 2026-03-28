@@ -37,11 +37,61 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /auth/send-otp:
+    post:
+      operationId: sendOtp
+      tags: [auth]
+      summary: Send OTP to email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendOtpRequest"
+      responses:
+        "200":
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/verify-otp:
+    post:
+      operationId: verifyOtp
+      tags: [auth]
+      summary: Verify OTP code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyOtpRequest"
+      responses:
+        "200":
+          description: OTP valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /auth/register:
     post:
       operationId: register
       tags: [auth]
-      summary: Register a new user
+      summary: Register a new user (requires OTP verification first)
       requestBody:
         required: true
         content:
@@ -177,6 +227,56 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Purchase"
+        "400":
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /store/checkout:
+    post:
+      operationId: cartCheckout
+      tags: [purchases]
+      summary: Checkout cart with Discord OWO payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CartCheckoutRequest"
+      responses:
+        "200":
+          description: Order placed (pending Discord OWO payment)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/me/profile-picture:
+    put:
+      operationId: updateProfilePicture
+      tags: [users]
+      summary: Update user profile picture
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfilePictureRequest"
+      responses:
+        "200":
+          description: Profile picture updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
         "400":
           description: Error
           content:
@@ -640,6 +740,63 @@ components:
       required:
         - message
 
+    SendOtpRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        purpose:
+          type: string
+          enum: [registration, login]
+      required:
+        - email
+        - purpose
+
+    VerifyOtpRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        code:
+          type: string
+        purpose:
+          type: string
+          enum: [registration, login]
+      required:
+        - email
+        - code
+        - purpose
+
+    CartCheckoutRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              itemId:
+                type: integer
+              quantity:
+                type: integer
+            required:
+              - itemId
+              - quantity
+        discordUsername:
+          type: string
+        couponCode:
+          type: string
+      required:
+        - items
+
+    UpdateProfilePictureRequest:
+      type: object
+      properties:
+        avatarUrl:
+          type: string
+      required:
+        - avatarUrl
+
     RegisterRequest:
       type: object
       properties:
@@ -651,10 +808,13 @@ components:
           type: string
         minecraftUsername:
           type: string
+        otpCode:
+          type: string
       required:
         - username
         - email
         - password
+        - otpCode
 
     LoginRequest:
       type: object

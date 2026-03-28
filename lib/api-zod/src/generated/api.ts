@@ -15,13 +15,39 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * @summary Register a new user
+ * @summary Send OTP to email
+ */
+export const SendOtpBody = zod.object({
+  email: zod.string(),
+  purpose: zod.enum(["registration", "login"]),
+});
+
+export const SendOtpResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Verify OTP code
+ */
+export const VerifyOtpBody = zod.object({
+  email: zod.string(),
+  code: zod.string(),
+  purpose: zod.enum(["registration", "login"]),
+});
+
+export const VerifyOtpResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Register a new user (requires OTP verification first)
  */
 export const RegisterBody = zod.object({
   username: zod.string(),
   email: zod.string(),
   password: zod.string(),
   minecraftUsername: zod.string().optional(),
+  otpCode: zod.string(),
 });
 
 export const RegisterResponse = zod.object({
@@ -162,6 +188,35 @@ export const PurchaseItemResponse = zod.object({
   couponUsed: zod.string().optional(),
   status: zod.enum(["pending", "completed", "failed", "refunded"]),
   createdAt: zod.string(),
+});
+
+/**
+ * @summary Checkout cart with Discord OWO payment
+ */
+export const CartCheckoutBody = zod.object({
+  items: zod.array(
+    zod.object({
+      itemId: zod.number(),
+      quantity: zod.number(),
+    }),
+  ),
+  discordUsername: zod.string().optional(),
+  couponCode: zod.string().optional(),
+});
+
+export const CartCheckoutResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Update user profile picture
+ */
+export const UpdateProfilePictureBody = zod.object({
+  avatarUrl: zod.string(),
+});
+
+export const UpdateProfilePictureResponse = zod.object({
+  message: zod.string(),
 });
 
 /**

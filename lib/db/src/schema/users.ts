@@ -18,6 +18,8 @@ export const usersTable = pgTable("users", {
   isBanned: boolean("is_banned").notNull().default(false),
   banReason: text("ban_reason"),
   activeRank: text("active_rank"),
+  avatarUrl: text("avatar_url"),
+  emailVerified: boolean("email_verified").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

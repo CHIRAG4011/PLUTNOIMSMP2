@@ -22,6 +22,7 @@ import type {
   Announcement,
   AuthResponse,
   BanRequest,
+  CartCheckoutRequest,
   Coupon,
   CreateAnnouncementRequest,
   CreateCouponRequest,
@@ -40,12 +41,15 @@ import type {
   RegisterRequest,
   Role,
   SendMessageRequest,
+  SendOtpRequest,
   ServerStatus,
   StoreItem,
   Ticket,
   TicketMessage,
   TicketWithMessages,
+  UpdateProfilePictureRequest,
   User,
+  VerifyOtpRequest,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -133,7 +137,179 @@ export function useHealthCheck<
 }
 
 /**
- * @summary Register a new user
+ * @summary Send OTP to email
+ */
+export const getSendOtpUrl = () => {
+  return `/api/auth/send-otp`;
+};
+
+export const sendOtp = async (
+  sendOtpRequest: SendOtpRequest,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getSendOtpUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(sendOtpRequest),
+  });
+};
+
+export const getSendOtpMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendOtp>>,
+    TError,
+    { data: BodyType<SendOtpRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendOtp>>,
+  TError,
+  { data: BodyType<SendOtpRequest> },
+  TContext
+> => {
+  const mutationKey = ["sendOtp"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendOtp>>,
+    { data: BodyType<SendOtpRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return sendOtp(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendOtpMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendOtp>>
+>;
+export type SendOtpMutationBody = BodyType<SendOtpRequest>;
+export type SendOtpMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Send OTP to email
+ */
+export const useSendOtp = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendOtp>>,
+    TError,
+    { data: BodyType<SendOtpRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendOtp>>,
+  TError,
+  { data: BodyType<SendOtpRequest> },
+  TContext
+> => {
+  return useMutation(getSendOtpMutationOptions(options));
+};
+
+/**
+ * @summary Verify OTP code
+ */
+export const getVerifyOtpUrl = () => {
+  return `/api/auth/verify-otp`;
+};
+
+export const verifyOtp = async (
+  verifyOtpRequest: VerifyOtpRequest,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getVerifyOtpUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(verifyOtpRequest),
+  });
+};
+
+export const getVerifyOtpMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyOtp>>,
+    TError,
+    { data: BodyType<VerifyOtpRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof verifyOtp>>,
+  TError,
+  { data: BodyType<VerifyOtpRequest> },
+  TContext
+> => {
+  const mutationKey = ["verifyOtp"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof verifyOtp>>,
+    { data: BodyType<VerifyOtpRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return verifyOtp(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type VerifyOtpMutationResult = NonNullable<
+  Awaited<ReturnType<typeof verifyOtp>>
+>;
+export type VerifyOtpMutationBody = BodyType<VerifyOtpRequest>;
+export type VerifyOtpMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Verify OTP code
+ */
+export const useVerifyOtp = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyOtp>>,
+    TError,
+    { data: BodyType<VerifyOtpRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof verifyOtp>>,
+  TError,
+  { data: BodyType<VerifyOtpRequest> },
+  TContext
+> => {
+  return useMutation(getVerifyOtpMutationOptions(options));
+};
+
+/**
+ * @summary Register a new user (requires OTP verification first)
  */
 export const getRegisterUrl = () => {
   return `/api/auth/register`;
@@ -196,7 +372,7 @@ export type RegisterMutationBody = BodyType<RegisterRequest>;
 export type RegisterMutationError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Register a new user
+ * @summary Register a new user (requires OTP verification first)
  */
 export const useRegister = <
   TError = ErrorType<ErrorResponse>,
@@ -713,6 +889,179 @@ export const usePurchaseItem = <
   TContext
 > => {
   return useMutation(getPurchaseItemMutationOptions(options));
+};
+
+/**
+ * @summary Checkout cart with Discord OWO payment
+ */
+export const getCartCheckoutUrl = () => {
+  return `/api/store/checkout`;
+};
+
+export const cartCheckout = async (
+  cartCheckoutRequest: CartCheckoutRequest,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getCartCheckoutUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(cartCheckoutRequest),
+  });
+};
+
+export const getCartCheckoutMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cartCheckout>>,
+    TError,
+    { data: BodyType<CartCheckoutRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cartCheckout>>,
+  TError,
+  { data: BodyType<CartCheckoutRequest> },
+  TContext
+> => {
+  const mutationKey = ["cartCheckout"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cartCheckout>>,
+    { data: BodyType<CartCheckoutRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return cartCheckout(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CartCheckoutMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cartCheckout>>
+>;
+export type CartCheckoutMutationBody = BodyType<CartCheckoutRequest>;
+export type CartCheckoutMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Checkout cart with Discord OWO payment
+ */
+export const useCartCheckout = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cartCheckout>>,
+    TError,
+    { data: BodyType<CartCheckoutRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cartCheckout>>,
+  TError,
+  { data: BodyType<CartCheckoutRequest> },
+  TContext
+> => {
+  return useMutation(getCartCheckoutMutationOptions(options));
+};
+
+/**
+ * @summary Update user profile picture
+ */
+export const getUpdateProfilePictureUrl = () => {
+  return `/api/users/me/profile-picture`;
+};
+
+export const updateProfilePicture = async (
+  updateProfilePictureRequest: UpdateProfilePictureRequest,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getUpdateProfilePictureUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateProfilePictureRequest),
+  });
+};
+
+export const getUpdateProfilePictureMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProfilePicture>>,
+    TError,
+    { data: BodyType<UpdateProfilePictureRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateProfilePicture>>,
+  TError,
+  { data: BodyType<UpdateProfilePictureRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateProfilePicture"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateProfilePicture>>,
+    { data: BodyType<UpdateProfilePictureRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateProfilePicture(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateProfilePictureMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateProfilePicture>>
+>;
+export type UpdateProfilePictureMutationBody =
+  BodyType<UpdateProfilePictureRequest>;
+export type UpdateProfilePictureMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update user profile picture
+ */
+export const useUpdateProfilePicture = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProfilePicture>>,
+    TError,
+    { data: BodyType<UpdateProfilePictureRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateProfilePicture>>,
+  TError,
+  { data: BodyType<UpdateProfilePictureRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateProfilePictureMutationOptions(options));
 };
 
 /**
