@@ -1,5 +1,5 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from "react";
-import { User, useGetMe } from "@workspace/api-client-react";
+import { User, useGetMe, setAuthTokenGetter } from "@workspace/api-client-react";
 
 interface AuthContextType {
   user: User | null;
@@ -12,9 +12,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Set up the auth token getter so all API requests send Authorization header
+setAuthTokenGetter(() => localStorage.getItem("plutonium_token"));
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(localStorage.getItem("plutonium_token"));
-  
+
   const { data: user, isLoading, refetch } = useGetMe({
     query: {
       enabled: !!token,
@@ -31,11 +34,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   const login = (newToken: string) => {
+    localStorage.setItem("plutonium_token", newToken);
     setToken(newToken);
-    setTimeout(() => refetch(), 50); // small delay to ensure token is picked up
+    refetch();
   };
 
   const logout = () => {
+    localStorage.removeItem("plutonium_token");
     setToken(null);
   };
 
