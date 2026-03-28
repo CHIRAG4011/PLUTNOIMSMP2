@@ -164,6 +164,60 @@ router.post("/login", async (req, res) => {
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
+
+    const code = generateOtpCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await db.delete(otpsTable).where(
+      and(eq(otpsTable.email, email), eq(otpsTable.purpose, "login"))
+    );
+    await db.insert(otpsTable).values({
+      id: generateId(),
+      email,
+      code,
+      purpose: "login",
+      expiresAt,
+    });
+
+    await sendOtpEmail(email, code, "login");
+
+    res.json({ requiresOtp: true, message: "Verification code sent to your email" });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/login/verify", async (req, res) => {
+  try {
+    const { email, otpCode } = req.body;
+    if (!email || !otpCode) {
+      res.status(400).json({ error: "Email and OTP code are required" });
+      return;
+    }
+
+    const [otp] = await db.select().from(otpsTable).where(
+      and(
+        eq(otpsTable.email, email),
+        eq(otpsTable.code, otpCode),
+        eq(otpsTable.purpose, "login"),
+        gt(otpsTable.expiresAt, new Date()),
+      )
+    ).limit(1);
+
+    if (!otp) {
+      res.status(400).json({ error: "Invalid or expired code" });
+      return;
+    }
+
+    await db.delete(otpsTable).where(eq(otpsTable.id, otp.id));
+
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    if (!user) {
+      res.status(401).json({ error: "User not found" });
+      return;
+    }
+
     const token = signToken({ id: user.id, username: user.username, role: user.role });
     const { passwordHash: _, ...safeUser } = user;
 
