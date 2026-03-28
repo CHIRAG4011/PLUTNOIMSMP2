@@ -892,7 +892,88 @@ export const usePurchaseItem = <
 };
 
 /**
- * @summary Checkout cart with Discord OWO payment
+ * @summary Send OTP to verify checkout
+ */
+export const getSendCheckoutOtpUrl = () => {
+  return `/api/store/checkout/send-otp`;
+};
+
+export const sendCheckoutOtp = async (
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getSendCheckoutOtpUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSendCheckoutOtpMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendCheckoutOtp>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendCheckoutOtp>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["sendCheckoutOtp"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendCheckoutOtp>>,
+    void
+  > = () => {
+    return sendCheckoutOtp(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendCheckoutOtpMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendCheckoutOtp>>
+>;
+
+export type SendCheckoutOtpMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Send OTP to verify checkout
+ */
+export const useSendCheckoutOtp = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendCheckoutOtp>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendCheckoutOtp>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getSendCheckoutOtpMutationOptions(options));
+};
+
+/**
+ * @summary Checkout cart (requires OTP verification)
  */
 export const getCartCheckoutUrl = () => {
   return `/api/store/checkout`;
@@ -955,7 +1036,7 @@ export type CartCheckoutMutationBody = BodyType<CartCheckoutRequest>;
 export type CartCheckoutMutationError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Checkout cart with Discord OWO payment
+ * @summary Checkout cart (requires OTP verification)
  */
 export const useCartCheckout = <
   TError = ErrorType<ErrorResponse>,

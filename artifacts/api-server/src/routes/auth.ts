@@ -21,7 +21,6 @@ router.post("/send-otp", async (req, res) => {
       return;
     }
 
-    // For registration, check email isn't already registered
     if (purpose === "registration") {
       const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
       if (existing.length > 0) {
@@ -31,9 +30,8 @@ router.post("/send-otp", async (req, res) => {
     }
 
     const code = generateOtpCode();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Delete old OTPs for this email+purpose
     await db.delete(otpsTable).where(
       and(eq(otpsTable.email, email), eq(otpsTable.purpose, purpose))
     );
@@ -94,7 +92,6 @@ router.post("/register", async (req, res) => {
       return;
     }
 
-    // Verify OTP
     const [otp] = await db.select().from(otpsTable).where(
       and(
         eq(otpsTable.email, email),
@@ -133,10 +130,8 @@ router.post("/register", async (req, res) => {
       emailVerified: true,
     }).returning();
 
-    // Clean up OTP
     await db.delete(otpsTable).where(eq(otpsTable.id, otp.id));
 
-    // Send welcome email
     await sendWelcomeEmail(email, username).catch(() => {});
 
     const token = signToken({ id: user.id, username: user.username, role: user.role });
@@ -172,7 +167,6 @@ router.post("/login", async (req, res) => {
     const token = signToken({ id: user.id, username: user.username, role: user.role });
     const { passwordHash: _, ...safeUser } = user;
 
-    // Send login notification email (fire-and-forget)
     sendLoginNotificationEmail(email, user.username).catch(() => {});
 
     res.json({ user: safeUser, token });
@@ -198,6 +192,114 @@ router.get("/me", requireAuth, async (req: AuthRequest, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || "";
+const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || "";
+const DISCORD_REDIRECT_URI = process.env.DISCORD_REDIRECT_URI || "";
+const FRONTEND_URL = process.env.FRONTEND_URL || "";
+
+router.get("/discord", (req, res) => {
+  if (!DISCORD_CLIENT_ID || !DISCORD_REDIRECT_URI) {
+    res.status(501).json({ error: "Discord OAuth not configured" });
+    return;
+  }
+  const params = new URLSearchParams({
+    client_id: DISCORD_CLIENT_ID,
+    redirect_uri: DISCORD_REDIRECT_URI,
+    response_type: "code",
+    scope: "identify email",
+  });
+  res.redirect(`https://discord.com/oauth2/authorize?${params.toString()}`);
+});
+
+router.get("/discord/callback", async (req, res) => {
+  if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET || !DISCORD_REDIRECT_URI) {
+    res.redirect(`${FRONTEND_URL}/login?error=discord_not_configured`);
+    return;
+  }
+  const { code } = req.query;
+  if (!code || typeof code !== "string") {
+    res.redirect(`${FRONTEND_URL}/login?error=discord_cancelled`);
+    return;
+  }
+
+  try {
+    const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: DISCORD_CLIENT_ID,
+        client_secret: DISCORD_CLIENT_SECRET,
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: DISCORD_REDIRECT_URI,
+      }),
+    });
+
+    const tokenData = await tokenRes.json() as any;
+    if (!tokenData.access_token) {
+      res.redirect(`${FRONTEND_URL}/login?error=discord_token_failed`);
+      return;
+    }
+
+    const userRes = await fetch("https://discord.com/api/users/@me", {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    const discordUser = await userRes.json() as any;
+
+    if (!discordUser.id) {
+      res.redirect(`${FRONTEND_URL}/login?error=discord_user_failed`);
+      return;
+    }
+
+    const discordAvatar = discordUser.avatar
+      ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
+      : null;
+
+    let [user] = await db.select().from(usersTable).where(eq(usersTable.discordId, discordUser.id)).limit(1);
+
+    if (!user) {
+      if (discordUser.email) {
+        [user] = await db.select().from(usersTable).where(eq(usersTable.email, discordUser.email)).limit(1);
+      }
+    }
+
+    if (user) {
+      await db.update(usersTable).set({
+        discordId: discordUser.id,
+        discordUsername: discordUser.username,
+        discordAvatar,
+        updatedAt: new Date(),
+      }).where(eq(usersTable.id, user.id));
+      const [updatedUser] = await db.select().from(usersTable).where(eq(usersTable.id, user.id)).limit(1);
+      const token = signToken({ id: updatedUser.id, username: updatedUser.username, role: updatedUser.role });
+      res.redirect(`${FRONTEND_URL}/dashboard?token=${token}`);
+    } else {
+      const username = discordUser.username.replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 20) || `user_${discordUser.id.slice(-6)}`;
+      const email = discordUser.email || `${discordUser.id}@discord.placeholder`;
+      const id = generateId();
+      const tempPassword = await bcrypt.hash(generateId(), 10);
+
+      const [newUser] = await db.insert(usersTable).values({
+        id,
+        username,
+        email,
+        passwordHash: tempPassword,
+        role: "user",
+        discordId: discordUser.id,
+        discordUsername: discordUser.username,
+        discordAvatar,
+        emailVerified: Boolean(discordUser.email),
+      }).returning();
+
+      const token = signToken({ id: newUser.id, username: newUser.username, role: newUser.role });
+      res.redirect(`${FRONTEND_URL}/dashboard?token=${token}`);
+    }
+  } catch (err) {
+    console.error("Discord OAuth error:", err);
+    res.redirect(`${FRONTEND_URL}/login?error=discord_error`);
   }
 });
 

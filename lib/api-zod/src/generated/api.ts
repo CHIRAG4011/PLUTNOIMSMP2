@@ -191,17 +191,24 @@ export const PurchaseItemResponse = zod.object({
 });
 
 /**
- * @summary Checkout cart with Discord OWO payment
+ * @summary Send OTP to verify checkout
+ */
+export const SendCheckoutOtpResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Checkout cart (requires OTP verification)
  */
 export const CartCheckoutBody = zod.object({
   items: zod.array(
     zod.object({
-      itemId: zod.number(),
+      itemId: zod.string(),
       quantity: zod.number(),
     }),
   ),
-  discordUsername: zod.string().optional(),
   couponCode: zod.string().optional(),
+  otpCode: zod.string(),
 });
 
 export const CartCheckoutResponse = zod.object({

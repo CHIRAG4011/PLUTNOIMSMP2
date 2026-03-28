@@ -46,14 +46,14 @@ export interface VerifyOtpRequest {
 }
 
 export type CartCheckoutRequestItemsItem = {
-  itemId: number;
+  itemId: string;
   quantity: number;
 };
 
 export interface CartCheckoutRequest {
   items: CartCheckoutRequestItemsItem[];
-  discordUsername?: string;
   couponCode?: string;
+  otpCode: string;
 }
 
 export interface UpdateProfilePictureRequest {

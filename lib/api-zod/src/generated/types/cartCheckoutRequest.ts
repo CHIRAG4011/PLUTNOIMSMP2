@@ -9,6 +9,6 @@ import type { CartCheckoutRequestItemsItem } from "./cartCheckoutRequestItemsIte
 
 export interface CartCheckoutRequest {
   items: CartCheckoutRequestItemsItem[];
-  discordUsername?: string;
   couponCode?: string;
+  otpCode: string;
 }

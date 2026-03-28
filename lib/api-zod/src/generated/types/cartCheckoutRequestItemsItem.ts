@@ -7,6 +7,6 @@
  */
 
 export type CartCheckoutRequestItemsItem = {
-  itemId: number;
+  itemId: string;
   quantity: number;
 };

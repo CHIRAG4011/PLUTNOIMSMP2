@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { storeItemsTable, purchasesTable, usersTable, couponsTable } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
+import { storeItemsTable, purchasesTable, usersTable, couponsTable, otpsTable } from "@workspace/db";
+import { eq, and, inArray, gt } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../lib/auth.js";
 import { generateId } from "../lib/id.js";
-import { sendPaymentConfirmationEmail } from "../lib/email.js";
+import { sendOrderConfirmationEmail, sendCheckoutOtpEmail } from "../lib/email.js";
 
 const router = Router();
 
@@ -74,14 +74,6 @@ router.post("/purchase", requireAuth, async (req: AuthRequest, res) => {
       }
     }
 
-    if (item.currency === "owo") {
-      if (user.owoBalance < finalPrice) {
-        res.status(400).json({ error: "Insufficient OWO balance" });
-        return;
-      }
-      await db.update(usersTable).set({ owoBalance: user.owoBalance - finalPrice }).where(eq(usersTable.id, user.id));
-    }
-
     if (item.category === "ranks") {
       await db.update(usersTable).set({ activeRank: item.name }).where(eq(usersTable.id, user.id));
     }
@@ -94,9 +86,9 @@ router.post("/purchase", requireAuth, async (req: AuthRequest, res) => {
       itemName: item.name,
       itemCategory: item.category,
       pricePaid: finalPrice,
-      currency: item.currency,
+      currency: "usd",
       couponUsed,
-      status: "completed",
+      status: "pending",
     }).returning();
     res.json(purchase);
   } catch (err) {
@@ -105,11 +97,43 @@ router.post("/purchase", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+router.post("/checkout/send-otp", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.id)).limit(1);
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    await db.delete(otpsTable).where(and(eq(otpsTable.email, user.email), eq(otpsTable.purpose, "checkout")));
+    await db.insert(otpsTable).values({
+      id: generateId(),
+      email: user.email,
+      code,
+      purpose: "checkout",
+      expiresAt,
+    });
+
+    await sendCheckoutOtpEmail(user.email, user.username, code);
+    res.json({ message: "OTP sent to your email" });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to send OTP" });
+  }
+});
+
 router.post("/checkout", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { items, discordUsername, couponCode } = req.body;
+    const { items, couponCode, otpCode } = req.body;
     if (!items || !Array.isArray(items) || items.length === 0) {
       res.status(400).json({ error: "Cart is empty" });
+      return;
+    }
+    if (!otpCode) {
+      res.status(400).json({ error: "OTP verification required" });
       return;
     }
 
@@ -118,6 +142,22 @@ router.post("/checkout", requireAuth, async (req: AuthRequest, res) => {
       res.status(404).json({ error: "User not found" });
       return;
     }
+
+    const [otp] = await db.select().from(otpsTable).where(
+      and(
+        eq(otpsTable.email, user.email),
+        eq(otpsTable.code, otpCode),
+        eq(otpsTable.purpose, "checkout"),
+        gt(otpsTable.expiresAt, new Date()),
+      )
+    ).limit(1);
+
+    if (!otp) {
+      res.status(400).json({ error: "Invalid or expired OTP code" });
+      return;
+    }
+
+    await db.delete(otpsTable).where(eq(otpsTable.id, otp.id));
 
     const itemIds = items.map((i: any) => i.itemId);
     const storeItems = await db.select().from(storeItemsTable).where(
@@ -140,16 +180,18 @@ router.post("/checkout", requireAuth, async (req: AuthRequest, res) => {
       }
     }
 
-    let totalOwo = 0;
-    const itemNames: string[] = [];
+    let totalUsd = 0;
+    const orderItems: { name: string; price: number; quantity: number }[] = [];
 
     for (const cartItem of items as { itemId: string; quantity: number }[]) {
       const storeItem = storeItems.find(i => i.id === cartItem.itemId);
       if (!storeItem) continue;
       const qty = Math.max(1, cartItem.quantity || 1);
-      let price = storeItem.price * qty;
-      if (discountPercent > 0) price = Math.floor(price * (1 - discountPercent / 100));
-      if (storeItem.currency === "owo") totalOwo += price;
+      let unitPrice = storeItem.price;
+      if (discountPercent > 0) unitPrice = Math.floor(unitPrice * (1 - discountPercent / 100));
+      totalUsd += unitPrice * qty;
+
+      orderItems.push({ name: storeItem.name, price: unitPrice, quantity: qty });
 
       for (let q = 0; q < qty; q++) {
         await db.insert(purchasesTable).values({
@@ -158,19 +200,17 @@ router.post("/checkout", requireAuth, async (req: AuthRequest, res) => {
           itemId: storeItem.id,
           itemName: storeItem.name,
           itemCategory: storeItem.category,
-          pricePaid: Math.floor(storeItem.price * (discountPercent > 0 ? (1 - discountPercent / 100) : 1)),
-          currency: storeItem.currency,
+          pricePaid: unitPrice,
+          currency: "usd",
           couponUsed: couponCode || null,
           status: "pending",
         });
-        itemNames.push(qty > 1 ? `${storeItem.name} x${qty}` : storeItem.name);
       }
     }
 
-    // Send confirmation email (fire-and-forget)
-    sendPaymentConfirmationEmail(user.email, user.username, [...new Set(itemNames)], totalOwo).catch(() => {});
+    sendOrderConfirmationEmail(user.email, user.username, orderItems, totalUsd, couponCode ? discountPercent : 0).catch(() => {});
 
-    res.json({ message: `Order placed! Go to our Discord and run \`owo pay PlutoniumSMP ${totalOwo}\` to complete payment.` });
+    res.json({ message: "Order placed successfully! Check your email for confirmation. Your order is pending review." });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });

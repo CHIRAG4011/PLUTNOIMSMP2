@@ -39,7 +39,7 @@ export const leaderboardTable = pgTable("leaderboard", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const otpPurposeEnum = pgEnum("otp_purpose", ["registration", "login"]);
+export const otpPurposeEnum = pgEnum("otp_purpose", ["registration", "login", "checkout"]);
 
 export const otpsTable = pgTable("otps", {
   id: text("id").primaryKey(),

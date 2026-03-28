@@ -14,7 +14,7 @@ Full-stack Minecraft Lifesteal server website for "Plutonium SMP". Dark + neon g
 - **API framework**: Express 5 (artifacts/api-server)
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **Auth**: JWT (jsonwebtoken + bcryptjs)
+- **Auth**: JWT (jsonwebtoken + bcryptjs) + Discord OAuth
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 - **UI**: Tailwind CSS, Framer Motion, Recharts, React Hook Form
@@ -37,10 +37,11 @@ artifacts-monorepo/
 ## Website Pages
 
 - `/` — Home (hero, server IP, player count, features, announcements)
-- `/store` — Server store (ranks, crate keys, coins) with category tabs
-- `/login` — Login page (email + password)
-- `/register` — Registration page
-- `/dashboard` — User dashboard (profile, purchases, tickets)
+- `/store` — Server store (add-to-cart flow, USD pricing, category tabs)
+- `/cart` — Shopping cart with coupon code + OTP checkout verification
+- `/login` — Login page (Discord OAuth button + email/password)
+- `/register` — Registration page (email OTP verification + Discord OAuth)
+- `/dashboard` — User dashboard (profile, order history with status badges)
 - `/tickets` — Ticket system (create, view tickets)
 - `/tickets/:id` — Individual ticket chat view
 - `/leaderboard` — Player leaderboard
@@ -51,7 +52,6 @@ artifacts-monorepo/
 - `/admin/purchases` — Purchase logs
 - `/admin/announcements` — Announcement management
 - `/admin/coupons` — Coupon/discount management
-- `/admin/currency` — OWO currency adjustment
 
 ## Default Admin Account
 
@@ -61,21 +61,50 @@ artifacts-monorepo/
 
 ## Database Schema
 
-Tables: `users`, `store_items`, `purchases`, `tickets`, `ticket_messages`, `announcements`, `coupons`, `leaderboard`
+Tables: `users`, `store_items`, `purchases`, `tickets`, `ticket_messages`, `announcements`, `coupons`, `leaderboard`, `otps`
+
+OTP purposes supported: `registration`, `login`, `checkout`
 
 ## Auth
 
 JWT tokens stored in localStorage as `plutonium_token`. Bearer token sent in Authorization header for all protected routes. Admin routes require `admin` or `owner` role.
 
+Discord OAuth: `/api/auth/discord` → `/api/auth/discord/callback` → redirect to `FRONTEND_URL/dashboard?token=<jwt>`
+
+## Cart System
+
+Cart state managed via React Context (`src/lib/cart.tsx`) with localStorage persistence. Cart items store the full StoreItem object + quantity. Checkout flow:
+1. User adds items to cart on Store page
+2. Goes to /cart page
+3. Clicks "Verify & Checkout" → API sends OTP to user's email
+4. User enters 6-digit OTP → API creates purchase records with `status: "pending"`
+5. Confirmation email sent via SMTP
+
 ## API Routes
 
 All under `/api`:
-- `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/me`
-- `/store/items`, `/store/purchase`
+- `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/me`, `/auth/send-otp`, `/auth/verify-otp`
+- `/auth/discord`, `/auth/discord/callback` (Discord OAuth)
+- `/store/items`, `/store/purchase`, `/store/checkout/send-otp`, `/store/checkout`
 - `/users/purchases`
 - `/tickets`, `/tickets/:id`, `/tickets/:id/messages`, `/tickets/:id/close`
 - `/server/status`, `/leaderboard`, `/announcements`
 - `/admin/*` (admin-only routes)
+
+## Required Environment Variables
+
+### Gmail SMTP (for OTP + confirmation emails):
+- `SMTP_HOST=smtp.gmail.com`
+- `SMTP_PORT=587`
+- `SMTP_USER=<your-gmail>`
+- `SMTP_PASS=<gmail-app-password>`
+- `SMTP_FROM=<display-name@gmail.com>`
+
+### Discord OAuth:
+- `DISCORD_CLIENT_ID=<your-app-id>`
+- `DISCORD_CLIENT_SECRET=<your-app-secret>`
+- `DISCORD_REDIRECT_URI=https://<domain>/api/auth/discord/callback`
+- `FRONTEND_URL=https://<your-domain>`
 
 ## Running
 
