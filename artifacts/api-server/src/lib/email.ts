@@ -17,6 +17,16 @@ if (isConfigured) {
     secure: SMTP_PORT === 465,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
   });
+
+  transporter.verify().then(() => {
+    console.log("[EMAIL] SMTP connection verified successfully");
+  }).catch((err: Error) => {
+    console.error(`[EMAIL] SMTP connection FAILED: ${err.message}`);
+    if (SMTP_HOST.includes("gmail")) {
+      console.error("[EMAIL] Gmail tip: Make sure SMTP_PASS is an App Password, not your regular Google password.");
+      console.error("[EMAIL] Generate one at: https://myaccount.google.com/apppasswords");
+    }
+  });
 }
 
 async function sendEmail(to: string, subject: string, html: string) {
@@ -25,7 +35,15 @@ async function sendEmail(to: string, subject: string, html: string) {
     console.log(`[EMAIL BODY]`, html.replace(/<[^>]+>/g, " ").trim());
     return;
   }
-  await transporter.sendMail({ from: SMTP_FROM, to, subject, html });
+  try {
+    await transporter.sendMail({ from: SMTP_FROM, to, subject, html });
+  } catch (err: any) {
+    const message = err?.message || String(err);
+    if (message.includes("535") || message.includes("534") || message.includes("EAUTH") || message.includes("Invalid login")) {
+      throw new Error("SMTP authentication failed. If using Gmail, ensure SMTP_PASS is an App Password (not your regular password).");
+    }
+    throw err;
+  }
 }
 
 const brandHeader = `
