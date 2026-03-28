@@ -14,6 +14,7 @@
     "@workspace/db": "workspace:*",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
+    "nodemailer": "^6.9.16",
     "cors": "^2",
     "drizzle-orm": "catalog:",
     "express": "^5",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
+    "@types/nodemailer": "^6.4.17",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",

@@ -10,10 +10,10 @@
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^3.0.3"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.7",
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "catalog:",
     "tsx": "catalog:"
   }
