@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Plutonium SMP"
+version = "1.0.0"
+id = "artifacts/plutonium-smp"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19366
+
+[services.development]
+run = "pnpm --filter @workspace/plutonium-smp run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/plutonium-smp", "run", "build" ]
+publicDir = "artifacts/plutonium-smp/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19366"
+BASE_PATH = "/"

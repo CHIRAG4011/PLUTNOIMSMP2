@@ -1,0 +1,23 @@
+packages:
+  "framer-motion": "For premium smooth page transitions and micro-interactions"
+  "recharts": "For the admin dashboard analytics visualization"
+  "react-hook-form": "For robust form state management"
+  "@hookform/resolvers": "Zod validation resolver for forms"
+  "date-fns": "For formatting timestamps elegantly"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility to resolve Tailwind CSS class conflicts"
+
+images:
+  - path: "artifacts/plutonium-smp/public/images/hero-bg.png"
+    description: "Dark cinematic blocky voxel landscape with glowing neon green accents and a premium cyberpunk gaming atmosphere"
+    aspect_ratio: "16:9"
+  - path: "artifacts/plutonium-smp/public/images/logo.png"
+    description: "Minimalist geometric letter P logo in bold aggressive gaming style, glowing neon green on pure black background, esports team aesthetic"
+    aspect_ratio: "1:1"
+  - path: "artifacts/plutonium-smp/public/images/store-bg.png"
+    description: "Abstract dark glowing green energy mesh network, premium gaming aesthetic background with deep shadows"
+    aspect_ratio: "16:9"
+
+notes:
+  - "The generated @workspace/api-client-react hooks rely on customFetch which we assume correctly reads Authorization: Bearer {localStorage.getItem('plutonium_token')} based on standard implementations."
+  - "Using wouter for routing. Nested layouts are handled via component wrapping."

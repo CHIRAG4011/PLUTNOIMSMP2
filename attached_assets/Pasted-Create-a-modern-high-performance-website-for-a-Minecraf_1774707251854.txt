@@ -1,0 +1,145 @@
+Create a modern, high-performance website for a Minecraft Lifesteal server named “Plutonium SMP”.
+
+🎯 Core Goal
+
+The website should:
+
+Promote the server
+Sell crates, ranks, and items
+Integrate with Discord (OWO currency system)
+Provide a full admin dashboard
+Include authentication, ticket system, and clean UI
+🎨 DESIGN REQUIREMENTS
+Theme: Dark + Neon Green (Plutonium style)
+Style: Modern, clean, minimal, gaming-focused
+UI Inspiration: Feather Client / modern SaaS dashboards
+Animations:
+Smooth hover effects
+Fade-ins
+Slide transitions
+Responsive: Mobile + Desktop optimized
+Fonts: Clean sans-serif (gaming aesthetic)
+🌐 MAIN WEBSITE PAGES
+1. Home Page
+Hero section (server name + tagline)
+Server IP + Copy button
+Player stats (online players, uptime)
+Features of Lifesteal SMP
+CTA buttons:
+Play Now
+Store
+Join Discord
+2. Store Page
+Categories:
+Ranks
+Crate Keys
+Coins / Currency
+Payment using:
+Discord OWO currency
+Show:
+Price
+Description
+Buy button
+Auto delivery system (Minecraft + Discord sync)
+3. Login Page (Separate)
+Email + Password login
+Discord OAuth login
+Clean minimal UI
+4. Register Page (Separate)
+Username
+Email
+Password
+Confirm Password
+Discord linking option
+5. User Dashboard
+Profile info
+Purchase history
+Linked Discord account
+Balance (OWO currency)
+Active ranks / perks
+🔗 DISCORD INTEGRATION
+Login via Discord OAuth2
+Fetch:
+Username
+ID
+Avatar
+Sync with OWO currency
+Allow:
+Spending OWO coins for store items
+Webhooks for:
+Purchases
+Tickets
+Admin alerts
+🧾 TICKET SYSTEM
+Features:
+Create ticket
+Categories:
+Support
+Purchase Issues
+Report Player
+Chat-style UI
+Admin replies
+Ticket status:
+Open / Closed / Pending
+🛠️ ADMIN PANEL (15+ FEATURES)
+
+Create a separate admin dashboard with multiple pages:
+
+Admin Features:
+User Management
+Ban / Unban Users
+View Purchases
+Add / Edit Store Items
+Manage Ranks
+Manage Crates
+Currency Control (OWO sync)
+Ticket Management
+Discord Logs Viewer
+Server Stats Panel
+Announcements System
+Coupon / Discount System
+Payment Logs
+Role Permissions System
+Website Settings
+API Key Management
+SFTP File Manager (for server files)
+🔐 BACKEND REQUIREMENTS
+Authentication system:
+JWT / Session-based
+Database:
+MySQL / MongoDB
+Secure password hashing
+API system for Minecraft server integration
+📡 SERVER INTEGRATION
+Minecraft server sync:
+Give ranks automatically
+Give crate keys
+Use:
+Plugin API or webhook system
+📂 SFTP SUPPORT
+Connect to local SFTP server
+Allow:
+File upload/download
+Plugin management
+Config editing
+⚙️ TECH STACK (Recommended)
+Frontend:
+React / Next.js
+Backend:
+Node.js (Express)
+Database:
+MongoDB / MySQL
+Auth:
+JWT + Discord OAuth2
+💎 EXTRA FEATURES
+Leaderboards (top players / richest)
+Live server status (online/offline)
+Notifications system
+Dark mode (default)
+SEO optimized pages
+🎯 FINAL OUTPUT EXPECTATION
+Fully working website (frontend + backend)
+Clean folder structure
+Modular code
+Ready for deployment
+Scalable and optimized
