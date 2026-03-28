@@ -251,17 +251,25 @@ router.get("/me", requireAuth, async (req: AuthRequest, res) => {
 
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || "";
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || "";
-const DISCORD_REDIRECT_URI = process.env.DISCORD_REDIRECT_URI || "";
-const FRONTEND_URL = process.env.FRONTEND_URL || "";
+
+function getBaseUrl(req: any): string {
+  const replitDomain = process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS;
+  if (replitDomain) return `https://${replitDomain.split(",")[0].trim()}`;
+  const host = req.get("host");
+  const proto = req.get("x-forwarded-proto") || req.protocol || "https";
+  return `${proto}://${host}`;
+}
 
 router.get("/discord", (req, res) => {
-  if (!DISCORD_CLIENT_ID || !DISCORD_REDIRECT_URI) {
+  if (!DISCORD_CLIENT_ID) {
     res.status(501).json({ error: "Discord OAuth not configured" });
     return;
   }
+  const base = getBaseUrl(req);
+  const redirectUri = `${base}/api/auth/discord/callback`;
   const params = new URLSearchParams({
     client_id: DISCORD_CLIENT_ID,
-    redirect_uri: DISCORD_REDIRECT_URI,
+    redirect_uri: redirectUri,
     response_type: "code",
     scope: "identify email",
   });
@@ -269,13 +277,17 @@ router.get("/discord", (req, res) => {
 });
 
 router.get("/discord/callback", async (req, res) => {
-  if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET || !DISCORD_REDIRECT_URI) {
-    res.redirect(`${FRONTEND_URL}/login?error=discord_not_configured`);
+  const base = getBaseUrl(req);
+  const redirectUri = `${base}/api/auth/discord/callback`;
+  const frontendUrl = base;
+
+  if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET) {
+    res.redirect(`${frontendUrl}/login?error=discord_not_configured`);
     return;
   }
   const { code } = req.query;
   if (!code || typeof code !== "string") {
-    res.redirect(`${FRONTEND_URL}/login?error=discord_cancelled`);
+    res.redirect(`${frontendUrl}/login?error=discord_cancelled`);
     return;
   }
 
@@ -288,13 +300,13 @@ router.get("/discord/callback", async (req, res) => {
         client_secret: DISCORD_CLIENT_SECRET,
         grant_type: "authorization_code",
         code,
-        redirect_uri: DISCORD_REDIRECT_URI,
+        redirect_uri: redirectUri,
       }),
     });
 
     const tokenData = await tokenRes.json() as any;
     if (!tokenData.access_token) {
-      res.redirect(`${FRONTEND_URL}/login?error=discord_token_failed`);
+      res.redirect(`${frontendUrl}/login?error=discord_token_failed`);
       return;
     }
 
@@ -304,7 +316,7 @@ router.get("/discord/callback", async (req, res) => {
     const discordUser = await userRes.json() as any;
 
     if (!discordUser.id) {
-      res.redirect(`${FRONTEND_URL}/login?error=discord_user_failed`);
+      res.redirect(`${frontendUrl}/login?error=discord_user_failed`);
       return;
     }
 
@@ -329,7 +341,7 @@ router.get("/discord/callback", async (req, res) => {
       }).where(eq(usersTable.id, user.id));
       const [updatedUser] = await db.select().from(usersTable).where(eq(usersTable.id, user.id)).limit(1);
       const token = signToken({ id: updatedUser.id, username: updatedUser.username, role: updatedUser.role });
-      res.redirect(`${FRONTEND_URL}/dashboard?token=${token}`);
+      res.redirect(`${frontendUrl}/dashboard?token=${token}`);
     } else {
       const username = discordUser.username.replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 20) || `user_${discordUser.id.slice(-6)}`;
       const email = discordUser.email || `${discordUser.id}@discord.placeholder`;
@@ -349,11 +361,12 @@ router.get("/discord/callback", async (req, res) => {
       }).returning();
 
       const token = signToken({ id: newUser.id, username: newUser.username, role: newUser.role });
-      res.redirect(`${FRONTEND_URL}/dashboard?token=${token}`);
+      res.redirect(`${frontendUrl}/dashboard?token=${token}`);
     }
   } catch (err) {
     console.error("Discord OAuth error:", err);
-    res.redirect(`${FRONTEND_URL}/login?error=discord_error`);
+    const base = getBaseUrl(req);
+    res.redirect(`${base}/login?error=discord_error`);
   }
 });
 
