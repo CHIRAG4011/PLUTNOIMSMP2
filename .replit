@@ -27,3 +27,14 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+SMTP_HOST = "smtp.gmail.com"
+SMTP_PORT = "587"
+SMTP_USER = "admin@plutoniumsmp.fun"
+SMTP_FROM = "Plutonium SMP <admin@plutoniumsmp.fun>"
+DISCORD_CLIENT_ID = "1487491532281090221"
+FRONTEND_URL = "https://05f0cd6a-a565-4265-8bee-3defda58095e-00-1h4l5ycm44vxk.pike.replit.dev"
+DISCORD_REDIRECT_URI = "https://05f0cd6a-a565-4265-8bee-3defda58095e-00-1h4l5ycm44vxk.pike.replit.dev/api/auth/discord/callback"
