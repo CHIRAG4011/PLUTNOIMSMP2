@@ -41,8 +41,12 @@ export default function Dashboard() {
     }
   }, []);
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  if (!user && !new URLSearchParams(search).get("token")) return <Redirect to="/login" />;
+  const tokenInUrl = !!new URLSearchParams(search).get("token");
+
+  if (isLoading || (tokenInUrl && !user)) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+  if (!user) return <Redirect to="/login" />;
 
   const pending = purchases?.filter(p => p.status === "pending") ?? [];
   const completed = purchases?.filter(p => p.status === "completed") ?? [];
