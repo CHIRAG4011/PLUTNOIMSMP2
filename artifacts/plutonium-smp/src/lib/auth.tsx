@@ -1,4 +1,5 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { User, useGetMe, setAuthTokenGetter } from "@workspace/api-client-react";
 
 interface AuthContextType {
@@ -17,6 +18,7 @@ setAuthTokenGetter(() => localStorage.getItem("plutonium_token"));
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(localStorage.getItem("plutonium_token"));
+  const queryClient = useQueryClient();
 
   const { data: user, isLoading, refetch } = useGetMe({
     query: {
@@ -42,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem("plutonium_token");
     setToken(null);
+    queryClient.clear();
   };
 
   return (
