@@ -31,7 +31,7 @@ router.get("/stats", async (req, res) => {
       activeRanks: activeRanks.count,
       bannedUsers: bannedUsers.count,
       newUsersToday: newUsersToday.count,
-      revenueToday: Number(revenueToday[0].total),
+      revenueToday: Number(revenueToday.total),
     });
   } catch (err) {
     req.log.error(err);
