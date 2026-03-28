@@ -70,12 +70,7 @@ export default function Login() {
   };
 
   const handleDiscordLogin = () => {
-    const url = "/api/auth/discord";
-    if (window.top && window.top !== window) {
-      window.top.location.href = url;
-    } else {
-      window.location.href = url;
-    }
+    window.open("/api/auth/discord", "_blank", "noopener,noreferrer");
   };
 
   return (

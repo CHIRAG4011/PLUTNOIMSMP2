@@ -36,12 +36,7 @@ export default function Register() {
   const [emailInput, setEmailInput] = useState("");
 
   const handleDiscordLogin = () => {
-    const url = "/api/auth/discord";
-    if (window.top && window.top !== window) {
-      window.top.location.href = url;
-    } else {
-      window.location.href = url;
-    }
+    window.open("/api/auth/discord", "_blank", "noopener,noreferrer");
   };
 
   const { mutate: sendOtp, isPending: sendingOtp } = useSendOtp();
