@@ -103,8 +103,17 @@ All under `/api`:
 ### Discord OAuth:
 - `DISCORD_CLIENT_ID=<your-app-id>`
 - `DISCORD_CLIENT_SECRET=<your-app-secret>`
-- `DISCORD_REDIRECT_URI=https://<domain>/api/auth/discord/callback`
-- `FRONTEND_URL=https://<your-domain>`
+
+### Deployment (Vercel / production):
+- `APP_URL=https://<api-domain>` — explicit base URL for the API (used in Discord OAuth redirect URI). Takes priority over all automatic detection.
+- `ALLOWED_ORIGINS=https://<frontend-domain>` — CORS allowed origins
+- `VITE_API_URL=https://<api-domain>` — frontend env var pointing to the API
+
+## Vercel Deployment
+
+- `artifacts/api-server/vercel.json` routes all requests to Express via `api/index.ts`
+- `artifacts/plutonium-smp/vercel.json` rewrites all paths to `index.html` for SPA routing
+- See `DEPLOYMENT.md` in the project root for the full step-by-step guide
 
 ## Running
 

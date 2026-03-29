@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "48NTFLFUvSf2Nq7Bm8bCA"
+uri = "file://DEPLOYMENT.md"
+type = "text"
+title = "Deployment Guide — Plutonium SMP"

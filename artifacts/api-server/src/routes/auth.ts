@@ -270,8 +270,11 @@ const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || "";
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || "";
 
 function getBaseUrl(req: any): string {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/+$/, "");
   const replitDomain = process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS;
   if (replitDomain) return `https://${replitDomain.split(",")[0].trim()}`;
+  const vercelUrl = process.env.VERCEL_URL;
+  if (vercelUrl) return `https://${vercelUrl}`;
   const host = req.get("host");
   const proto = req.get("x-forwarded-proto") || req.protocol || "https";
   return `${proto}://${host}`;
