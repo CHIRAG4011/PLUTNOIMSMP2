@@ -17,9 +17,8 @@ async function ensureLeaderboardEntry(userId: string, username: string, minecraf
       minecraftUsername: minecraftUsername || null,
       avatarUrl: avatarUrl || null,
       activeRank: activeRank || null,
-      hearts: 10,
+      tier: "LT5",
       kills: 0,
-      owoBalance: 0,
     }).onConflictDoNothing();
   }
 }

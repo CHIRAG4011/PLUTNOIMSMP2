@@ -275,10 +275,18 @@ router.post("/users/:id/role", async (req: AuthRequest, res) => {
   }
 });
 
+const TIER_ORDER: Record<string, number> = { HT1: 1, HT2: 2, HT3: 3, HT4: 4, HT5: 5, LT1: 6, LT2: 7, LT3: 8, LT4: 9, LT5: 10 };
+
 router.get("/leaderboard", async (req, res) => {
   try {
-    const entries = await db.select().from(leaderboardTable).orderBy(desc(leaderboardTable.kills));
-    const ranked = entries.map((e, i) => ({ ...e, rank: i + 1 }));
+    const entries = await db.select().from(leaderboardTable).limit(200);
+    const sorted = entries.sort((a, b) => {
+      const ta = TIER_ORDER[a.tier] ?? 99;
+      const tb = TIER_ORDER[b.tier] ?? 99;
+      if (ta !== tb) return ta - tb;
+      return b.kills - a.kills;
+    });
+    const ranked = sorted.map((e, i) => ({ ...e, rank: i + 1 }));
     res.json(ranked);
   } catch (err) {
     req.log.error(err);
@@ -288,24 +296,20 @@ router.get("/leaderboard", async (req, res) => {
 
 router.put("/leaderboard/:userId", async (req, res) => {
   try {
-    const { hearts, kills, owoBalance, activeRank, minecraftUsername } = req.body;
+    const { tier, kills, activeRank, minecraftUsername } = req.body;
     const [entry] = await db.select().from(leaderboardTable).where(eq(leaderboardTable.userId, req.params.userId)).limit(1);
     if (!entry) {
       res.status(404).json({ error: "Player not found in leaderboard" });
       return;
     }
     const updates: any = { updatedAt: new Date() };
-    if (hearts !== undefined) updates.hearts = Number(hearts);
+    if (tier !== undefined) updates.tier = tier;
     if (kills !== undefined) updates.kills = Number(kills);
-    if (owoBalance !== undefined) updates.owoBalance = Number(owoBalance);
     if (activeRank !== undefined) updates.activeRank = activeRank || null;
     if (minecraftUsername !== undefined) updates.minecraftUsername = minecraftUsername || null;
 
     const [updated] = await db.update(leaderboardTable).set(updates).where(eq(leaderboardTable.userId, req.params.userId)).returning();
 
-    if (owoBalance !== undefined) {
-      await db.update(usersTable).set({ owoBalance: Number(owoBalance) }).where(eq(usersTable.id, req.params.userId));
-    }
     if (activeRank !== undefined) {
       await db.update(usersTable).set({ activeRank: activeRank || null }).where(eq(usersTable.id, req.params.userId));
     }
@@ -334,9 +338,8 @@ router.post("/leaderboard/sync", async (req, res) => {
           minecraftUsername: user.minecraftUsername || null,
           avatarUrl: user.avatarUrl || user.discordAvatar || null,
           activeRank: user.activeRank || null,
-          hearts: 10,
+          tier: "LT5",
           kills: 0,
-          owoBalance: user.owoBalance,
         }).onConflictDoNothing();
         added++;
       }

@@ -132,16 +132,16 @@ async function seed() {
   const existingLb = await db.select().from(leaderboardTable).limit(1);
   if (existingLb.length === 0) {
     await db.insert(leaderboardTable).values([
-      { id: "lb-1", userId: "admin-plutonium-001", username: "PlutoniumAdmin", minecraftUsername: "PlutoniumAdmin", hearts: 50, kills: 420, owoBalance: 999999, activeRank: "Owner" },
-      { id: "lb-2", userId: "lb-user-2", username: "HeartThief_X", hearts: 35, kills: 312, owoBalance: 85000, activeRank: "Legend" },
-      { id: "lb-3", userId: "lb-user-3", username: "NeonSlayer", hearts: 28, kills: 287, owoBalance: 62000, activeRank: "MVP" },
-      { id: "lb-4", userId: "lb-user-4", username: "LifeStealKing", hearts: 24, kills: 198, owoBalance: 45000, activeRank: "Legend" },
-      { id: "lb-5", userId: "lb-user-5", username: "GreenReaper", hearts: 20, kills: 176, owoBalance: 38000, activeRank: "MVP" },
-      { id: "lb-6", userId: "lb-user-6", username: "AtomicBoom", hearts: 18, kills: 154, owoBalance: 31000, activeRank: "VIP" },
-      { id: "lb-7", userId: "lb-user-7", username: "CrystalHunter", hearts: 15, kills: 132, owoBalance: 28000 },
-      { id: "lb-8", userId: "lb-user-8", username: "PlutoPvP", hearts: 12, kills: 98, owoBalance: 19000, activeRank: "VIP" },
-      { id: "lb-9", userId: "lb-user-9", username: "RadiationX", hearts: 10, kills: 87, owoBalance: 14000 },
-      { id: "lb-10", userId: "lb-user-10", username: "NuclearFrost", hearts: 8, kills: 65, owoBalance: 9000 },
+      { id: "lb-1", userId: "admin-plutonium-001", username: "PlutoniumAdmin", minecraftUsername: "PlutoniumAdmin", tier: "HT1", kills: 420, activeRank: "Owner" },
+      { id: "lb-2", userId: "lb-user-2", username: "HeartThief_X", tier: "HT1", kills: 312, activeRank: "Legend" },
+      { id: "lb-3", userId: "lb-user-3", username: "NeonSlayer", tier: "HT2", kills: 287, activeRank: "MVP" },
+      { id: "lb-4", userId: "lb-user-4", username: "LifeStealKing", tier: "HT2", kills: 198, activeRank: "Legend" },
+      { id: "lb-5", userId: "lb-user-5", username: "GreenReaper", tier: "HT3", kills: 176, activeRank: "MVP" },
+      { id: "lb-6", userId: "lb-user-6", username: "AtomicBoom", tier: "HT3", kills: 154, activeRank: "VIP" },
+      { id: "lb-7", userId: "lb-user-7", username: "CrystalHunter", tier: "HT4", kills: 132 },
+      { id: "lb-8", userId: "lb-user-8", username: "PlutoPvP", tier: "LT1", kills: 98, activeRank: "VIP" },
+      { id: "lb-9", userId: "lb-user-9", username: "RadiationX", tier: "LT2", kills: 87 },
+      { id: "lb-10", userId: "lb-user-10", username: "NuclearFrost", tier: "LT3", kills: 65 },
     ]).onConflictDoNothing();
     console.log("Created leaderboard entries");
   }

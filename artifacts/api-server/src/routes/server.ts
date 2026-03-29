@@ -17,17 +17,24 @@ router.get("/server/status", async (_req, res) => {
   });
 });
 
+const TIER_ORDER: Record<string, number> = { HT1: 1, HT2: 2, HT3: 3, HT4: 4, HT5: 5, LT1: 6, LT2: 7, LT3: 8, LT4: 9, LT5: 10 };
+
 router.get("/leaderboard", async (req, res) => {
   try {
-    const entries = await db.select().from(leaderboardTable).orderBy(desc(leaderboardTable.hearts)).limit(20);
-    const ranked = entries.map((e, i) => ({
+    const entries = await db.select().from(leaderboardTable).limit(100);
+    const sorted = entries.sort((a, b) => {
+      const ta = TIER_ORDER[a.tier] ?? 99;
+      const tb = TIER_ORDER[b.tier] ?? 99;
+      if (ta !== tb) return ta - tb;
+      return b.kills - a.kills;
+    });
+    const ranked = sorted.map((e, i) => ({
       rank: i + 1,
       userId: e.userId,
       username: e.username,
       minecraftUsername: e.minecraftUsername,
-      hearts: e.hearts,
+      tier: e.tier,
       kills: e.kills,
-      owoBalance: e.owoBalance,
       activeRank: e.activeRank,
       avatarUrl: e.avatarUrl,
     }));

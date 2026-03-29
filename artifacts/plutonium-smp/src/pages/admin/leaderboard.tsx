@@ -7,15 +7,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, RefreshCw, Heart, Crosshair, Coins, Trophy } from "lucide-react";
+import { Pencil, RefreshCw, Crosshair, Trophy } from "lucide-react";
+
+const TIERS = ["HT1","HT2","HT3","HT4","HT5","LT1","LT2","LT3","LT4","LT5"];
+
+const TIER_STYLES: Record<string, string> = {
+  HT1: "bg-red-500/20 text-red-400 border-red-500/40",
+  HT2: "bg-orange-500/20 text-orange-400 border-orange-500/40",
+  HT3: "bg-yellow-500/20 text-yellow-400 border-yellow-500/40",
+  HT4: "bg-green-500/20 text-green-400 border-green-500/40",
+  HT5: "bg-teal-500/20 text-teal-400 border-teal-500/40",
+  LT1: "bg-cyan-500/20 text-cyan-400 border-cyan-500/40",
+  LT2: "bg-blue-500/20 text-blue-400 border-blue-500/40",
+  LT3: "bg-indigo-500/20 text-indigo-400 border-indigo-500/40",
+  LT4: "bg-violet-500/20 text-violet-400 border-violet-500/40",
+  LT5: "bg-muted text-muted-foreground border-border",
+};
 
 interface EditState {
   userId: string;
   username: string;
-  hearts: number;
+  tier: string;
   kills: number;
-  owoBalance: number;
   activeRank: string;
   minecraftUsername: string;
 }
@@ -41,9 +56,8 @@ export default function AdminLeaderboard() {
     setEditEntry({
       userId: entry.userId,
       username: entry.username,
-      hearts: entry.hearts,
+      tier: entry.tier || "LT5",
       kills: entry.kills,
-      owoBalance: entry.owoBalance,
       activeRank: entry.activeRank || "",
       minecraftUsername: entry.minecraftUsername || "",
     });
@@ -55,9 +69,8 @@ export default function AdminLeaderboard() {
       {
         userId: editEntry.userId,
         data: {
-          hearts: editEntry.hearts,
+          tier: editEntry.tier,
           kills: editEntry.kills,
-          owoBalance: editEntry.owoBalance,
           activeRank: editEntry.activeRank,
           minecraftUsername: editEntry.minecraftUsername,
         },
@@ -73,17 +86,6 @@ export default function AdminLeaderboard() {
     );
   };
 
-  const rankBadgeStyle = (rank: string | null) => {
-    if (!rank) return "bg-muted text-muted-foreground";
-    const map: Record<string, string> = {
-      Owner: "bg-red-500/20 text-red-400 border-red-500/30",
-      Legend: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-      MVP: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-      VIP: "bg-green-500/20 text-green-400 border-green-500/30",
-    };
-    return map[rank] || "bg-primary/20 text-primary";
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-end">
@@ -92,7 +94,7 @@ export default function AdminLeaderboard() {
             <Trophy className="w-8 h-8 text-yellow-500" />
             Leaderboard Management
           </h1>
-          <p className="text-muted-foreground">Update player stats, ranks, and hearts.</p>
+          <p className="text-muted-foreground">Update player kills and tier placement.</p>
         </div>
         <Button onClick={handleSync} disabled={isSyncing} variant="outline" className="gap-2">
           <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
@@ -106,15 +108,10 @@ export default function AdminLeaderboard() {
             <TableRow className="border-border">
               <TableHead className="w-12">#</TableHead>
               <TableHead>Player</TableHead>
-              <TableHead>Rank</TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1"><Heart className="w-3 h-3 text-red-400" /> Hearts</div>
-              </TableHead>
+              <TableHead>Tier</TableHead>
+              <TableHead>Active Rank</TableHead>
               <TableHead>
                 <div className="flex items-center gap-1"><Crosshair className="w-3 h-3 text-orange-400" /> Kills</div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1"><Coins className="w-3 h-3 text-primary" /> OWO</div>
               </TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -123,7 +120,7 @@ export default function AdminLeaderboard() {
             {isLoading
               ? Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i} className="border-border">
-                    <TableCell colSpan={7}><div className="h-8 bg-muted animate-pulse rounded" /></TableCell>
+                    <TableCell colSpan={6}><div className="h-8 bg-muted animate-pulse rounded" /></TableCell>
                   </TableRow>
                 ))
               : entries?.map((entry) => (
@@ -142,15 +139,18 @@ export default function AdminLeaderboard() {
                       </div>
                     </TableCell>
                     <TableCell>
+                      <Badge variant="outline" className={TIER_STYLES[entry.tier] || "bg-muted text-muted-foreground"}>
+                        {entry.tier}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       {entry.activeRank ? (
-                        <Badge variant="outline" className={rankBadgeStyle(entry.activeRank)}>{entry.activeRank}</Badge>
+                        <Badge variant="outline" className="bg-primary/20 text-primary border-primary/30">{entry.activeRank}</Badge>
                       ) : (
                         <span className="text-muted-foreground text-sm">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-semibold text-red-400">{entry.hearts}</TableCell>
                     <TableCell className="font-semibold text-orange-400">{entry.kills}</TableCell>
-                    <TableCell className="font-semibold text-primary">{entry.owoBalance.toLocaleString()}</TableCell>
                     <TableCell className="text-right">
                       <Button size="sm" variant="outline" onClick={() => handleEdit(entry)} className="gap-1.5">
                         <Pencil className="w-3 h-3" /> Edit
@@ -170,14 +170,24 @@ export default function AdminLeaderboard() {
           {editEntry && (
             <div className="grid grid-cols-2 gap-4 py-2">
               <div className="space-y-1.5">
-                <Label>Hearts</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={20}
-                  value={editEntry.hearts}
-                  onChange={(e) => setEditEntry({ ...editEntry, hearts: Number(e.target.value) })}
-                />
+                <Label>Tier</Label>
+                <Select value={editEntry.tier} onValueChange={(v) => setEditEntry({ ...editEntry, tier: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="HT1" className="text-red-400">HT1 — High Tier 1</SelectItem>
+                    <SelectItem value="HT2" className="text-orange-400">HT2 — High Tier 2</SelectItem>
+                    <SelectItem value="HT3" className="text-yellow-400">HT3 — High Tier 3</SelectItem>
+                    <SelectItem value="HT4" className="text-green-400">HT4 — High Tier 4</SelectItem>
+                    <SelectItem value="HT5" className="text-teal-400">HT5 — High Tier 5</SelectItem>
+                    <SelectItem value="LT1" className="text-cyan-400">LT1 — Low Tier 1</SelectItem>
+                    <SelectItem value="LT2" className="text-blue-400">LT2 — Low Tier 2</SelectItem>
+                    <SelectItem value="LT3" className="text-indigo-400">LT3 — Low Tier 3</SelectItem>
+                    <SelectItem value="LT4" className="text-violet-400">LT4 — Low Tier 4</SelectItem>
+                    <SelectItem value="LT5">LT5 — Low Tier 5</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label>Kills</Label>
@@ -189,15 +199,6 @@ export default function AdminLeaderboard() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>OWO Balance</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={editEntry.owoBalance}
-                  onChange={(e) => setEditEntry({ ...editEntry, owoBalance: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-1.5">
                 <Label>Active Rank</Label>
                 <Input
                   value={editEntry.activeRank}
@@ -205,7 +206,7 @@ export default function AdminLeaderboard() {
                   onChange={(e) => setEditEntry({ ...editEntry, activeRank: e.target.value })}
                 />
               </div>
-              <div className="col-span-2 space-y-1.5">
+              <div className="space-y-1.5">
                 <Label>Minecraft Username</Label>
                 <Input
                   value={editEntry.minecraftUsername}

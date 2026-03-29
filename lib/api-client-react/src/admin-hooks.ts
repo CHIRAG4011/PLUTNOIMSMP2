@@ -6,9 +6,8 @@ export interface LeaderboardEntry {
   userId: string;
   username: string;
   minecraftUsername: string | null;
-  hearts: number;
+  tier: string;
   kills: number;
-  owoBalance: number;
   activeRank: string | null;
   avatarUrl: string | null;
   updatedAt: string;
@@ -27,7 +26,7 @@ export const useAdminUpdateLeaderboardStats = () => {
   return useMutation<
     LeaderboardEntry,
     Error,
-    { userId: string; data: { hearts?: number; kills?: number; owoBalance?: number; activeRank?: string; minecraftUsername?: string } }
+    { userId: string; data: { tier?: string; kills?: number; activeRank?: string; minecraftUsername?: string } }
   >({
     mutationFn: ({ userId, data }) =>
       customFetch(`/api/admin/leaderboard/${userId}`, {
