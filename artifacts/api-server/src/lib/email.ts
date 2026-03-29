@@ -40,14 +40,14 @@ async function sendEmail(to: string, subject: string, html: string) {
 const brandHeader = `
   <div style="background:#0a0a0a;padding:30px 40px 20px;border-bottom:2px solid #22c55e;">
     <h1 style="color:#22c55e;font-family:monospace;font-size:24px;margin:0;">⚡ PLUTONIUM SMP</h1>
-    <p style="color:#888;font-size:12px;margin:4px 0 0;">play.plutoniumsmp.net</p>
+    <p style="color:#888;font-size:12px;margin:4px 0 0;">play.plutoniumsmp.fun</p>
   </div>
 `;
 
 const brandFooter = `
   <div style="background:#0a0a0a;padding:20px 40px;border-top:1px solid #222;text-align:center;">
     <p style="color:#555;font-size:12px;margin:0;">© 2026 Plutonium SMP — Minecraft Lifesteal Server</p>
-    <p style="color:#555;font-size:12px;margin:4px 0 0;">play.plutoniumsmp.net</p>
+    <p style="color:#555;font-size:12px;margin:4px 0 0;">play.plutoniumsmp.fun</p>
   </div>
 `;
 
@@ -103,10 +103,10 @@ export async function sendWelcomeEmail(to: string, username: string) {
         <h2 style="color:#fff;margin:0 0 12px;">Welcome to Plutonium SMP, ${username}!</h2>
         <p style="color:#aaa;font-size:15px;">Your account has been created successfully. You're ready to join the ultimate Minecraft Lifesteal experience.</p>
         <div style="background:#0a0a0a;border:1px solid #333;border-radius:12px;padding:24px;margin:28px 0;">
-          <p style="color:#22c55e;font-family:monospace;font-size:16px;margin:0 0 8px;">🎮 Server IP: <strong>play.plutoniumsmp.net</strong></p>
+          <p style="color:#22c55e;font-family:monospace;font-size:16px;margin:0 0 8px;">🎮 Server IP: <strong>play.plutoniumsmp.fun</strong></p>
           <p style="color:#aaa;font-size:14px;margin:0;">Join our Discord to connect with the community!</p>
         </div>
-        <p style="color:#666;font-size:13px;">Visit <a href="https://plutoniumsmp.net/store" style="color:#22c55e;">the store</a> to grab exclusive ranks and perks.</p>
+        <p style="color:#666;font-size:13px;">Visit <a href="https://plutoniumsmp.fun/store" style="color:#22c55e;">the store</a> to grab exclusive ranks and perks.</p>
       </div>
       ${brandFooter}
     </div>

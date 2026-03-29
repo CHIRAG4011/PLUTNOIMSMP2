@@ -2,19 +2,49 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { leaderboardTable, announcementsTable, usersTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
+import { status as mcStatus } from "minecraft-server-util";
 
 const router = Router();
 
+const SERVER_IP = "play.plutoniumsmp.fun";
+const SERVER_PORT = 25565;
+
+let cachedStatus: any = null;
+let lastFetch = 0;
+const CACHE_TTL = 30_000;
+
 router.get("/server/status", async (_req, res) => {
-  res.json({
-    online: true,
-    players: Math.floor(Math.random() * 50) + 5,
-    maxPlayers: 100,
-    version: "1.21.1",
-    ip: "play.plutoniumsmp.net",
-    uptime: "99.9%",
-    tps: 19.8,
-  });
+  const now = Date.now();
+  if (cachedStatus && now - lastFetch < CACHE_TTL) {
+    res.json(cachedStatus);
+    return;
+  }
+  try {
+    const result = await mcStatus(SERVER_IP, SERVER_PORT, { timeout: 5000 });
+    cachedStatus = {
+      online: true,
+      players: result.players.online,
+      maxPlayers: result.players.max,
+      version: result.version.name,
+      ip: SERVER_IP,
+      uptime: "99.9%",
+      tps: 20,
+      motd: result.motd?.clean ?? "Plutonium SMP",
+    };
+  } catch {
+    cachedStatus = {
+      online: false,
+      players: 0,
+      maxPlayers: 100,
+      version: "1.21.1",
+      ip: SERVER_IP,
+      uptime: "99.9%",
+      tps: 0,
+      motd: "Server offline",
+    };
+  }
+  lastFetch = now;
+  res.json(cachedStatus);
 });
 
 const TIER_ORDER: Record<string, number> = { HT1: 1, HT2: 2, HT3: 3, HT4: 4, HT5: 5, LT1: 6, LT2: 7, LT3: 8, LT4: 9, LT5: 10 };
