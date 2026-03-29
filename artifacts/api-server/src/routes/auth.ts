@@ -271,10 +271,17 @@ const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || "";
 
 function getBaseUrl(req: any): string {
   if (process.env.APP_URL) return process.env.APP_URL.replace(/\/+$/, "");
-  const replitDomain = process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS;
-  if (replitDomain) return `https://${replitDomain.split(",")[0].trim()}`;
+  const replitDomains = process.env.REPLIT_DOMAINS;
+  if (replitDomains) return `https://${replitDomains.split(",")[0].trim()}`;
+  const replitDevDomain = process.env.REPLIT_DEV_DOMAIN;
+  if (replitDevDomain) return `https://${replitDevDomain}`;
   const vercelUrl = process.env.VERCEL_URL;
   if (vercelUrl) return `https://${vercelUrl}`;
+  const forwardedHost = req.get("x-forwarded-host");
+  if (forwardedHost && !forwardedHost.includes("localhost")) {
+    const proto = req.get("x-forwarded-proto") || "https";
+    return `${proto}://${forwardedHost}`;
+  }
   const host = req.get("host");
   const proto = req.get("x-forwarded-proto") || req.protocol || "https";
   return `${proto}://${host}`;
@@ -287,6 +294,7 @@ router.get("/discord", (req, res) => {
   }
   const base = getBaseUrl(req);
   const redirectUri = `${base}/api/auth/discord/callback`;
+  req.log.info({ redirectUri }, "Discord OAuth initiated");
   const params = new URLSearchParams({
     client_id: DISCORD_CLIENT_ID,
     redirect_uri: redirectUri,
