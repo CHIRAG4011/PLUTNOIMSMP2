@@ -6,3 +6,9 @@ id = "48NTFLFUvSf2Nq7Bm8bCA"
 uri = "file://DEPLOYMENT.md"
 type = "text"
 title = "Deployment Guide — Plutonium SMP"
+
+[[outputs]]
+id = "FFKUanfN8WekQOWFLrboE"
+uri = "file://env/VARIABLES.md"
+type = "text"
+title = "Environment Variables — Quick Reference"
