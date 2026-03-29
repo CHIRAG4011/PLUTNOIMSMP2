@@ -12,8 +12,8 @@ Full-stack Minecraft Lifesteal server website for "Plutonium SMP". Dark + neon g
 - **TypeScript version**: 5.9
 - **Frontend**: React + Vite (artifacts/plutonium-smp)
 - **API framework**: Express 5 (artifacts/api-server)
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
+- **Database**: MongoDB + Mongoose
+- **Validation**: Zod (`zod/v4`)
 - **Auth**: JWT (jsonwebtoken + bcryptjs) + Discord OAuth
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
@@ -30,7 +30,7 @@ artifacts-monorepo/
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
+│   └── db/                 # Mongoose models + DB connection
 └── scripts/                # Utility scripts
 ```
 
@@ -59,11 +59,14 @@ artifacts-monorepo/
 - Password: `admin123`
 - Role: Owner (full access)
 
-## Database Schema
+## Database
 
-Tables: `users`, `store_items`, `purchases`, `tickets`, `ticket_messages`, `announcements`, `coupons`, `leaderboard`, `otps`
+MongoDB + Mongoose. Collections: `users`, `storeitems`, `purchases`, `tickets`, `ticketmessages`, `announcements`, `coupons`, `leaderboards`, `otps`
 
-OTP purposes supported: `registration`, `login`, `checkout`
+Connection: set `MONGODB_URI` in Replit Secrets (or `artifacts/api-server/.env` for local dev).
+Free Atlas cluster: https://www.mongodb.com/cloud/atlas
+
+OTP purposes: `registration`, `login`, `checkout`
 
 ## Auth
 
@@ -93,6 +96,9 @@ All under `/api`:
 
 ## Required Environment Variables
 
+### Database (REQUIRED):
+- `MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/plutonium` — MongoDB Atlas connection string
+
 ### Gmail SMTP (for OTP + confirmation emails):
 - `SMTP_HOST=smtp.gmail.com`
 - `SMTP_PORT=587`
@@ -119,5 +125,6 @@ All under `/api`:
 
 - Frontend: `pnpm --filter @workspace/plutonium-smp run dev`
 - API: `pnpm --filter @workspace/api-server run dev`
+- Both: `pnpm dev` (parallel)
+- Seed DB: `pnpm --filter @workspace/scripts run seed`
 - Codegen: `pnpm --filter @workspace/api-spec run codegen`
-- DB push: `pnpm --filter @workspace/db run push`

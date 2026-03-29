@@ -1,7 +1,5 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { ticketsTable, ticketMessagesTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { Ticket, TicketMessage } from "@workspace/db";
 import { requireAuth, AuthRequest } from "../lib/auth.js";
 import { generateId } from "../lib/id.js";
 
@@ -9,10 +7,8 @@ const router = Router();
 
 router.get("/", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const tickets = await db.select().from(ticketsTable)
-      .where(eq(ticketsTable.userId, req.user!.id))
-      .orderBy(desc(ticketsTable.updatedAt));
-    res.json(tickets);
+    const tickets = await Ticket.find({ userId: req.user!.id }).sort({ updatedAt: -1 });
+    res.json(tickets.map((t) => t.toJSON()));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -27,19 +23,18 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
       return;
     }
     const ticketId = generateId();
-    const [ticket] = await db.insert(ticketsTable).values({
-      id: ticketId,
+    const ticket = await Ticket.create({
+      _id: ticketId,
       userId: req.user!.id,
       username: req.user!.username,
       subject,
-      category: category as any,
-      priority: (priority as any) || "medium",
+      category,
+      priority: priority || "medium",
       messageCount: 1,
-    }).returning();
+    });
 
-    const msgId = generateId();
-    await db.insert(ticketMessagesTable).values({
-      id: msgId,
+    await TicketMessage.create({
+      _id: generateId(),
       ticketId,
       userId: req.user!.id,
       username: req.user!.username,
@@ -48,7 +43,7 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
       isStaff: ["admin", "owner", "moderator"].includes(req.user!.role),
     });
 
-    res.json(ticket);
+    res.json(ticket.toJSON());
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -57,7 +52,7 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
 
 router.get("/:id", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const [ticket] = await db.select().from(ticketsTable).where(eq(ticketsTable.id, req.params.id)).limit(1);
+    const ticket = await Ticket.findOne({ _id: req.params.id });
     if (!ticket) {
       res.status(404).json({ error: "Ticket not found" });
       return;
@@ -66,10 +61,8 @@ router.get("/:id", requireAuth, async (req: AuthRequest, res) => {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    const messages = await db.select().from(ticketMessagesTable)
-      .where(eq(ticketMessagesTable.ticketId, req.params.id))
-      .orderBy(ticketMessagesTable.createdAt);
-    res.json({ ticket, messages });
+    const messages = await TicketMessage.find({ ticketId: req.params.id }).sort({ createdAt: 1 });
+    res.json({ ticket: ticket.toJSON(), messages: messages.map((m) => m.toJSON()) });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -83,7 +76,7 @@ router.post("/:id/messages", requireAuth, async (req: AuthRequest, res) => {
       res.status(400).json({ error: "Content required" });
       return;
     }
-    const [ticket] = await db.select().from(ticketsTable).where(eq(ticketsTable.id, req.params.id)).limit(1);
+    const ticket = await Ticket.findOne({ _id: req.params.id });
     if (!ticket) {
       res.status(404).json({ error: "Ticket not found" });
       return;
@@ -96,25 +89,28 @@ router.post("/:id/messages", requireAuth, async (req: AuthRequest, res) => {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
+
     const isStaff = ["admin", "owner", "moderator"].includes(req.user!.role);
-    const msgId = generateId();
-    const [msg] = await db.insert(ticketMessagesTable).values({
-      id: msgId,
+    const msg = await TicketMessage.create({
+      _id: generateId(),
       ticketId: req.params.id,
       userId: req.user!.id,
       username: req.user!.username,
       role: req.user!.role,
       content,
       isStaff,
-    }).returning();
+    });
 
-    await db.update(ticketsTable).set({
-      messageCount: ticket.messageCount + 1,
-      updatedAt: new Date(),
-      status: isStaff ? "pending" : "open",
-    }).where(eq(ticketsTable.id, req.params.id));
+    await Ticket.updateOne(
+      { _id: req.params.id },
+      {
+        messageCount: ticket.messageCount + 1,
+        updatedAt: new Date(),
+        status: isStaff ? "pending" : "open",
+      }
+    );
 
-    res.json(msg);
+    res.json(msg.toJSON());
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -123,7 +119,7 @@ router.post("/:id/messages", requireAuth, async (req: AuthRequest, res) => {
 
 router.post("/:id/close", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const [ticket] = await db.select().from(ticketsTable).where(eq(ticketsTable.id, req.params.id)).limit(1);
+    const ticket = await Ticket.findOne({ _id: req.params.id });
     if (!ticket) {
       res.status(404).json({ error: "Ticket not found" });
       return;
@@ -132,7 +128,7 @@ router.post("/:id/close", requireAuth, async (req: AuthRequest, res) => {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    await db.update(ticketsTable).set({ status: "closed", updatedAt: new Date() }).where(eq(ticketsTable.id, req.params.id));
+    await Ticket.updateOne({ _id: req.params.id }, { status: "closed", updatedAt: new Date() });
     res.json({ message: "Ticket closed" });
   } catch (err) {
     req.log.error(err);

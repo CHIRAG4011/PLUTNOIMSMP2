@@ -1,16 +1,21 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-import * as schema from "./schema";
-
-const { Pool } = pg;
-
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
-
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle(pool, { schema });
-
-export * from "./schema";
+export { connectDB } from "./connection.js";
+export { User } from "./models/User.js";
+export type { IUser } from "./models/User.js";
+export { Otp } from "./models/Otp.js";
+export type { IOtp } from "./models/Otp.js";
+export { Announcement } from "./models/Announcement.js";
+export type { IAnnouncement } from "./models/Announcement.js";
+export { Coupon } from "./models/Coupon.js";
+export type { ICoupon } from "./models/Coupon.js";
+export { Leaderboard } from "./models/Leaderboard.js";
+export type { ILeaderboard } from "./models/Leaderboard.js";
+export { StoreItem } from "./models/StoreItem.js";
+export type { IStoreItem } from "./models/StoreItem.js";
+export { ProductReview } from "./models/ProductReview.js";
+export type { IProductReview } from "./models/ProductReview.js";
+export { Purchase } from "./models/Purchase.js";
+export type { IPurchase } from "./models/Purchase.js";
+export { Ticket } from "./models/Ticket.js";
+export type { ITicket } from "./models/Ticket.js";
+export { TicketMessage } from "./models/TicketMessage.js";
+export type { ITicketMessage } from "./models/TicketMessage.js";

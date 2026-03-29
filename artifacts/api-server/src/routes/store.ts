@@ -1,7 +1,5 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { storeItemsTable, purchasesTable, usersTable, couponsTable, otpsTable, productReviewsTable } from "@workspace/db";
-import { eq, and, inArray, gt, ilike, or } from "drizzle-orm";
+import { StoreItem, Purchase, User, Coupon, Otp, ProductReview } from "@workspace/db";
 import { requireAuth, AuthRequest } from "../lib/auth.js";
 import { generateId } from "../lib/id.js";
 import { sendOrderConfirmationEmail, sendCheckoutOtpEmail } from "../lib/email.js";
@@ -11,28 +9,27 @@ const router = Router();
 router.get("/items", async (req, res) => {
   try {
     const { category, search } = req.query;
-    const conditions: any[] = [eq(storeItemsTable.isActive, true)];
+    const query: any = { isActive: true };
 
     if (category && typeof category === "string" && category !== "all") {
-      conditions.push(eq(storeItemsTable.category, category as any));
+      query.category = category;
     }
-
     if (search && typeof search === "string" && search.trim()) {
       const term = search.trim();
-      conditions.push(
-        or(
-          ilike(storeItemsTable.name, `%${term}%`),
-          ilike(storeItemsTable.description, `%${term}%`)
-        )
-      );
+      query.$or = [
+        { name: { $regex: term, $options: "i" } },
+        { description: { $regex: term, $options: "i" } },
+      ];
     }
 
-    const items = await db.select().from(storeItemsTable).where(and(...conditions));
-    items.sort((a, b) => {
-      if (b.isFeatured !== a.isFeatured) return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
-      return (b.sortOrder || 0) - (a.sortOrder || 0);
-    });
-    res.json(items);
+    const items = await StoreItem.find(query);
+    const sorted = items
+      .map((i) => i.toJSON())
+      .sort((a, b) => {
+        if (b.isFeatured !== a.isFeatured) return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+        return (b.sortOrder || 0) - (a.sortOrder || 0);
+      });
+    res.json(sorted);
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -41,12 +38,12 @@ router.get("/items", async (req, res) => {
 
 router.get("/items/:id", async (req, res) => {
   try {
-    const [item] = await db.select().from(storeItemsTable).where(eq(storeItemsTable.id, req.params.id)).limit(1);
+    const item = await StoreItem.findOne({ _id: req.params.id });
     if (!item) {
       res.status(404).json({ error: "Item not found" });
       return;
     }
-    res.json(item);
+    res.json(item.toJSON());
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -55,10 +52,8 @@ router.get("/items/:id", async (req, res) => {
 
 router.get("/items/:id/reviews", async (req, res) => {
   try {
-    const reviews = await db.select().from(productReviewsTable)
-      .where(eq(productReviewsTable.itemId, req.params.id))
-      .orderBy(productReviewsTable.createdAt);
-    res.json(reviews);
+    const reviews = await ProductReview.find({ itemId: req.params.id }).sort({ createdAt: 1 });
+    res.json(reviews.map((r) => r.toJSON()));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -76,20 +71,20 @@ router.post("/items/:id/reviews", requireAuth, async (req: AuthRequest, res) => 
       res.status(400).json({ error: "Comment is required" });
       return;
     }
-    const [item] = await db.select().from(storeItemsTable).where(eq(storeItemsTable.id, req.params.id)).limit(1);
+    const item = await StoreItem.findOne({ _id: req.params.id });
     if (!item) {
       res.status(404).json({ error: "Item not found" });
       return;
     }
-    const [review] = await db.insert(productReviewsTable).values({
-      id: generateId(),
+    const review = await ProductReview.create({
+      _id: generateId(),
       itemId: req.params.id,
       userId: req.user!.id,
       username: req.user!.username,
       rating: Number(rating),
       comment: comment.trim(),
-    }).returning();
-    res.json(review);
+    });
+    res.json(review.toJSON());
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -103,39 +98,39 @@ router.post("/purchase", requireAuth, async (req: AuthRequest, res) => {
       res.status(400).json({ error: "Item ID required" });
       return;
     }
-    const [item] = await db.select().from(storeItemsTable).where(and(eq(storeItemsTable.id, itemId), eq(storeItemsTable.isActive, true))).limit(1);
+    const item = await StoreItem.findOne({ _id: itemId, isActive: true });
     if (!item) {
       res.status(404).json({ error: "Item not found" });
       return;
     }
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.id)).limit(1);
+    const user = await User.findOne({ _id: req.user!.id });
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
     }
+
     let finalPrice = item.price;
     let couponUsed: string | null = null;
 
     if (couponCode) {
-      const [coupon] = await db.select().from(couponsTable).where(and(eq(couponsTable.code, couponCode), eq(couponsTable.isActive, true))).limit(1);
+      const coupon = await Coupon.findOne({ code: couponCode, isActive: true });
       if (coupon) {
-        if (!coupon.expiresAt || coupon.expiresAt > new Date()) {
-          if (!coupon.usageLimit || coupon.usageCount < coupon.usageLimit) {
-            finalPrice = Math.floor(finalPrice * (1 - coupon.discountPercent / 100));
-            couponUsed = couponCode;
-            await db.update(couponsTable).set({ usageCount: coupon.usageCount + 1 }).where(eq(couponsTable.id, coupon.id));
-          }
+        const notExpired = !coupon.expiresAt || coupon.expiresAt > new Date();
+        const withinLimit = !coupon.usageLimit || coupon.usageCount < coupon.usageLimit;
+        if (notExpired && withinLimit) {
+          finalPrice = Math.floor(finalPrice * (1 - coupon.discountPercent / 100));
+          couponUsed = couponCode;
+          await Coupon.updateOne({ _id: coupon._id }, { $inc: { usageCount: 1 } });
         }
       }
     }
 
     if (item.category === "ranks") {
-      await db.update(usersTable).set({ activeRank: item.name }).where(eq(usersTable.id, user.id));
+      await User.updateOne({ _id: user._id }, { activeRank: item.name });
     }
 
-    const id = generateId();
-    const [purchase] = await db.insert(purchasesTable).values({
-      id,
+    const purchase = await Purchase.create({
+      _id: generateId(),
       userId: user.id,
       itemId: item.id,
       itemName: item.name,
@@ -144,8 +139,8 @@ router.post("/purchase", requireAuth, async (req: AuthRequest, res) => {
       currency: "usd",
       couponUsed,
       status: "pending",
-    }).returning();
-    res.json(purchase);
+    });
+    res.json(purchase.toJSON());
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -154,7 +149,7 @@ router.post("/purchase", requireAuth, async (req: AuthRequest, res) => {
 
 router.post("/checkout/send-otp", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.id)).limit(1);
+    const user = await User.findOne({ _id: req.user!.id });
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
@@ -163,14 +158,8 @@ router.post("/checkout/send-otp", requireAuth, async (req: AuthRequest, res) => 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-    await db.delete(otpsTable).where(and(eq(otpsTable.email, user.email), eq(otpsTable.purpose, "checkout")));
-    await db.insert(otpsTable).values({
-      id: generateId(),
-      email: user.email,
-      code,
-      purpose: "checkout",
-      expiresAt,
-    });
+    await Otp.deleteMany({ email: user.email, purpose: "checkout" });
+    await Otp.create({ _id: generateId(), email: user.email, code, purpose: "checkout", expiresAt });
 
     await sendCheckoutOtpEmail(user.email, user.username, code);
     res.json({ message: "OTP sent to your email" });
@@ -192,32 +181,26 @@ router.post("/checkout", requireAuth, async (req: AuthRequest, res) => {
       return;
     }
 
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.id)).limit(1);
+    const user = await User.findOne({ _id: req.user!.id });
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
     }
 
-    const [otp] = await db.select().from(otpsTable).where(
-      and(
-        eq(otpsTable.email, user.email),
-        eq(otpsTable.code, otpCode),
-        eq(otpsTable.purpose, "checkout"),
-        gt(otpsTable.expiresAt, new Date()),
-      )
-    ).limit(1);
-
+    const otp = await Otp.findOne({
+      email: user.email,
+      code: otpCode,
+      purpose: "checkout",
+      expiresAt: { $gt: new Date() },
+    });
     if (!otp) {
       res.status(400).json({ error: "Invalid or expired OTP code" });
       return;
     }
+    await Otp.deleteOne({ _id: otp._id });
 
-    await db.delete(otpsTable).where(eq(otpsTable.id, otp.id));
-
-    const itemIds = items.map((i: any) => i.itemId);
-    const storeItems = await db.select().from(storeItemsTable).where(
-      and(inArray(storeItemsTable.id, itemIds), eq(storeItemsTable.isActive, true))
-    );
+    const itemIds = (items as { itemId: string; quantity: number }[]).map((i) => i.itemId);
+    const storeItems = await StoreItem.find({ _id: { $in: itemIds }, isActive: true });
 
     if (storeItems.length === 0) {
       res.status(400).json({ error: "No valid items found" });
@@ -226,12 +209,14 @@ router.post("/checkout", requireAuth, async (req: AuthRequest, res) => {
 
     let discountPercent = 0;
     if (couponCode) {
-      const [coupon] = await db.select().from(couponsTable).where(
-        and(eq(couponsTable.code, couponCode), eq(couponsTable.isActive, true))
-      ).limit(1);
-      if (coupon && (!coupon.expiresAt || coupon.expiresAt > new Date()) && (!coupon.usageLimit || coupon.usageCount < coupon.usageLimit)) {
-        discountPercent = coupon.discountPercent;
-        await db.update(couponsTable).set({ usageCount: coupon.usageCount + 1 }).where(eq(couponsTable.id, coupon.id));
+      const coupon = await Coupon.findOne({ code: couponCode, isActive: true });
+      if (coupon) {
+        const notExpired = !coupon.expiresAt || coupon.expiresAt > new Date();
+        const withinLimit = !coupon.usageLimit || coupon.usageCount < coupon.usageLimit;
+        if (notExpired && withinLimit) {
+          discountPercent = coupon.discountPercent;
+          await Coupon.updateOne({ _id: coupon._id }, { $inc: { usageCount: 1 } });
+        }
       }
     }
 
@@ -239,18 +224,17 @@ router.post("/checkout", requireAuth, async (req: AuthRequest, res) => {
     const orderItems: { name: string; price: number; quantity: number }[] = [];
 
     for (const cartItem of items as { itemId: string; quantity: number }[]) {
-      const storeItem = storeItems.find(i => i.id === cartItem.itemId);
+      const storeItem = storeItems.find((i) => i.id === cartItem.itemId);
       if (!storeItem) continue;
       const qty = Math.max(1, cartItem.quantity || 1);
       let unitPrice = storeItem.price;
       if (discountPercent > 0) unitPrice = Math.floor(unitPrice * (1 - discountPercent / 100));
       totalUsd += unitPrice * qty;
-
       orderItems.push({ name: storeItem.name, price: unitPrice, quantity: qty });
 
       for (let q = 0; q < qty; q++) {
-        await db.insert(purchasesTable).values({
-          id: generateId(),
+        await Purchase.create({
+          _id: generateId(),
           userId: user.id,
           itemId: storeItem.id,
           itemName: storeItem.name,
@@ -263,7 +247,13 @@ router.post("/checkout", requireAuth, async (req: AuthRequest, res) => {
       }
     }
 
-    sendOrderConfirmationEmail(user.email, user.username, orderItems, totalUsd, couponCode ? discountPercent : 0).catch(() => {});
+    sendOrderConfirmationEmail(
+      user.email,
+      user.username,
+      orderItems,
+      totalUsd,
+      couponCode ? discountPercent : 0
+    ).catch(() => {});
 
     res.json({ message: "Order placed successfully! Check your email for confirmation. Your order is pending review." });
   } catch (err) {
