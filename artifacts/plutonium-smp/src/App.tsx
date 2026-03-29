@@ -19,6 +19,7 @@ import Dashboard from "@/pages/dashboard";
 import Tickets from "@/pages/tickets/index";
 import TicketDetail from "@/pages/tickets/[id]";
 import Leaderboard from "@/pages/leaderboard";
+import PlayerProfile from "@/pages/players/[id]";
 
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminUsers from "@/pages/admin/users";
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/tickets" component={Tickets} />
       <Route path="/tickets/:id" component={TicketDetail} />
       <Route path="/leaderboard" component={Leaderboard} />
+      <Route path="/players/:id" component={PlayerProfile} />
 
       {/* Admin Routes wrapped in AdminLayout */}
       <Route path="/admin">{() => <Redirect to="/admin/dashboard" />}</Route>
