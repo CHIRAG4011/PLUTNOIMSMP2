@@ -5,14 +5,19 @@
 ### Local Development
 
 ```bash
-# API server
+# 1. Copy environment templates
 cp env/api.env.example artifacts/api-server/.env
-
-# Frontend (optional — proxy works without it)
 cp env/frontend.env.example artifacts/plutonium-smp/.env
+
+# 2. Fill in your values in both .env files, then:
+
+# 3. Start everything with one command
+pnpm dev
 ```
 
-Edit the `.env` files and fill in your values.
+That single `pnpm dev` starts the API server and frontend in parallel.
+- API:      http://localhost:3001
+- Frontend: http://localhost:5173
 
 ---
 

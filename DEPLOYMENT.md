@@ -71,15 +71,14 @@ pnpm --filter @workspace/db run migrate
 
 ### 3.5 Start both servers
 
-In two separate terminals:
-
 ```bash
-# Terminal 1 — API server (http://localhost:3001)
-pnpm --filter @workspace/api-server run dev
-
-# Terminal 2 — Frontend (http://localhost:5173)
-pnpm --filter @workspace/plutonium-smp run dev
+pnpm dev
 ```
+
+That's it. One command starts the API server and frontend in parallel.
+
+- API server → http://localhost:3001
+- Frontend   → http://localhost:5173
 
 Open `http://localhost:5173` in your browser.
 
