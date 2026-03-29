@@ -7,7 +7,7 @@ import { status as mcStatus } from "minecraft-server-util";
 const router = Router();
 
 const SERVER_IP = "play.plutoniumsmp.fun";
-const SERVER_PORT = 25565;
+const SERVER_PORT = 24006;
 
 let cachedStatus: any = null;
 let lastFetch = 0;
