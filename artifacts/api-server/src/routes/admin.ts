@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import {
   usersTable, storeItemsTable, purchasesTable,
-  ticketsTable, announcementsTable, couponsTable
+  ticketsTable, announcementsTable, couponsTable, leaderboardTable
 } from "@workspace/db";
 import { eq, desc, ilike, or, count, sql } from "drizzle-orm";
 import { requireAdmin, AuthRequest } from "../lib/auth.js";
@@ -244,6 +244,108 @@ router.get("/roles", async (_req, res) => {
     { id: "3", name: "moderator", permissions: ["manage_tickets", "view_users"], color: "#60A5FA", createdAt: new Date().toISOString() },
     { id: "4", name: "user", permissions: ["purchase", "tickets", "leaderboard"], color: "#9CA3AF", createdAt: new Date().toISOString() },
   ]);
+});
+
+router.post("/users/:id/role", async (req: AuthRequest, res) => {
+  try {
+    const { role } = req.body;
+    const validRoles = ["user", "moderator", "admin"];
+    if (!validRoles.includes(role)) {
+      res.status(400).json({ error: "Invalid role. Must be: user, moderator, or admin" });
+      return;
+    }
+    const [target] = await db.select().from(usersTable).where(eq(usersTable.id, req.params.id)).limit(1);
+    if (!target) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    if (target.role === "owner") {
+      res.status(403).json({ error: "Cannot change role of owner account" });
+      return;
+    }
+    if (req.user?.role !== "owner" && role === "admin") {
+      res.status(403).json({ error: "Only owners can promote users to admin" });
+      return;
+    }
+    await db.update(usersTable).set({ role: role as any, updatedAt: new Date() }).where(eq(usersTable.id, req.params.id));
+    res.json({ message: `User role updated to ${role}` });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/leaderboard", async (req, res) => {
+  try {
+    const entries = await db.select().from(leaderboardTable).orderBy(desc(leaderboardTable.kills));
+    const ranked = entries.map((e, i) => ({ ...e, rank: i + 1 }));
+    res.json(ranked);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/leaderboard/:userId", async (req, res) => {
+  try {
+    const { hearts, kills, owoBalance, activeRank, minecraftUsername } = req.body;
+    const [entry] = await db.select().from(leaderboardTable).where(eq(leaderboardTable.userId, req.params.userId)).limit(1);
+    if (!entry) {
+      res.status(404).json({ error: "Player not found in leaderboard" });
+      return;
+    }
+    const updates: any = { updatedAt: new Date() };
+    if (hearts !== undefined) updates.hearts = Number(hearts);
+    if (kills !== undefined) updates.kills = Number(kills);
+    if (owoBalance !== undefined) updates.owoBalance = Number(owoBalance);
+    if (activeRank !== undefined) updates.activeRank = activeRank || null;
+    if (minecraftUsername !== undefined) updates.minecraftUsername = minecraftUsername || null;
+
+    const [updated] = await db.update(leaderboardTable).set(updates).where(eq(leaderboardTable.userId, req.params.userId)).returning();
+
+    if (owoBalance !== undefined) {
+      await db.update(usersTable).set({ owoBalance: Number(owoBalance) }).where(eq(usersTable.id, req.params.userId));
+    }
+    if (activeRank !== undefined) {
+      await db.update(usersTable).set({ activeRank: activeRank || null }).where(eq(usersTable.id, req.params.userId));
+    }
+    if (minecraftUsername !== undefined) {
+      await db.update(usersTable).set({ minecraftUsername: minecraftUsername || null }).where(eq(usersTable.id, req.params.userId));
+    }
+
+    res.json(updated);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/leaderboard/sync", async (req, res) => {
+  try {
+    const users = await db.select().from(usersTable);
+    let added = 0;
+    for (const user of users) {
+      const existing = await db.select().from(leaderboardTable).where(eq(leaderboardTable.userId, user.id)).limit(1);
+      if (existing.length === 0) {
+        await db.insert(leaderboardTable).values({
+          id: generateId(),
+          userId: user.id,
+          username: user.username,
+          minecraftUsername: user.minecraftUsername || null,
+          avatarUrl: user.avatarUrl || user.discordAvatar || null,
+          activeRank: user.activeRank || null,
+          hearts: 10,
+          kills: 0,
+          owoBalance: user.owoBalance,
+        }).onConflictDoNothing();
+        added++;
+      }
+    }
+    res.json({ message: `Synced ${added} users to leaderboard` });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 export default router;

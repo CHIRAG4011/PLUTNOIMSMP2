@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { LayoutDashboard, Users, ShoppingBag, Ticket, CreditCard, Megaphone, Tag, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Users, ShoppingBag, Ticket, CreditCard, Megaphone, Tag, ShieldCheck, Trophy } from "lucide-react";
 
 export function AdminLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
@@ -25,6 +25,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const navItems = [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Users", href: "/admin/users", icon: Users },
+    { name: "Leaderboard", href: "/admin/leaderboard", icon: Trophy },
     { name: "Store Items", href: "/admin/store", icon: ShoppingBag },
     { name: "Tickets", href: "/admin/tickets", icon: Ticket },
     { name: "Purchases", href: "/admin/purchases", icon: CreditCard },

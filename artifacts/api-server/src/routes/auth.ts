@@ -1,11 +1,28 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
-import { usersTable, otpsTable } from "@workspace/db";
+import { usersTable, otpsTable, leaderboardTable } from "@workspace/db";
 import { eq, and, gt } from "drizzle-orm";
 import { signToken, requireAuth, AuthRequest } from "../lib/auth.js";
 import { generateId } from "../lib/id.js";
 import { sendOtpEmail, sendWelcomeEmail, sendLoginNotificationEmail } from "../lib/email.js";
+
+async function ensureLeaderboardEntry(userId: string, username: string, minecraftUsername?: string | null, avatarUrl?: string | null, activeRank?: string | null) {
+  const existing = await db.select().from(leaderboardTable).where(eq(leaderboardTable.userId, userId)).limit(1);
+  if (existing.length === 0) {
+    await db.insert(leaderboardTable).values({
+      id: generateId(),
+      userId,
+      username,
+      minecraftUsername: minecraftUsername || null,
+      avatarUrl: avatarUrl || null,
+      activeRank: activeRank || null,
+      hearts: 10,
+      kills: 0,
+      owoBalance: 0,
+    }).onConflictDoNothing();
+  }
+}
 
 const router = Router();
 
@@ -133,6 +150,7 @@ router.post("/register", async (req, res) => {
     await db.delete(otpsTable).where(eq(otpsTable.id, otp.id));
 
     await sendWelcomeEmail(email, username).catch(() => {});
+    await ensureLeaderboardEntry(user.id, user.username, user.minecraftUsername).catch(() => {});
 
     const token = signToken({ id: user.id, username: user.username, role: user.role });
     const { passwordHash: _, ...safeUser } = user;
@@ -351,6 +369,7 @@ router.get("/discord/callback", async (req, res) => {
         updatedAt: new Date(),
       }).where(eq(usersTable.id, user.id));
       const [updatedUser] = await db.select().from(usersTable).where(eq(usersTable.id, user.id)).limit(1);
+      await ensureLeaderboardEntry(updatedUser.id, updatedUser.username, updatedUser.minecraftUsername, discordAvatar, updatedUser.activeRank).catch(() => {});
       const token = signToken({ id: updatedUser.id, username: updatedUser.username, role: updatedUser.role });
       res.redirect(`${frontendUrl}/dashboard?token=${token}`);
     } else {
@@ -370,6 +389,8 @@ router.get("/discord/callback", async (req, res) => {
         discordAvatar,
         emailVerified: Boolean(discordUser.email),
       }).returning();
+
+      await ensureLeaderboardEntry(newUser.id, newUser.username, null, discordAvatar).catch(() => {});
 
       const token = signToken({ id: newUser.id, username: newUser.username, role: newUser.role });
       res.redirect(`${frontendUrl}/dashboard?token=${token}`);

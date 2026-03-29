@@ -27,6 +27,7 @@ import AdminTickets from "@/pages/admin/tickets";
 import AdminPurchases from "@/pages/admin/purchases";
 import AdminAnnouncements from "@/pages/admin/announcements";
 import AdminCoupons from "@/pages/admin/coupons";
+import AdminLeaderboard from "@/pages/admin/leaderboard";
 
 import NotFound from "@/pages/not-found";
 
@@ -55,6 +56,7 @@ function Router() {
       <Route path="/admin/purchases">{() => <AdminLayout><AdminPurchases /></AdminLayout>}</Route>
       <Route path="/admin/announcements">{() => <AdminLayout><AdminAnnouncements /></AdminLayout>}</Route>
       <Route path="/admin/coupons">{() => <AdminLayout><AdminCoupons /></AdminLayout>}</Route>
+      <Route path="/admin/leaderboard">{() => <AdminLayout><AdminLeaderboard /></AdminLayout>}</Route>
 
       <Route component={NotFound} />
     </Switch>
