@@ -3,7 +3,19 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const ticketStatusEnum = pgEnum("ticket_status", ["open", "pending", "closed"]);
-export const ticketCategoryEnum = pgEnum("ticket_category", ["support", "purchase_issues", "report_player", "general"]);
+export const ticketCategoryEnum = pgEnum("ticket_category", [
+  "support",
+  "purchase_issues",
+  "report_player",
+  "general",
+  "ban_appeal",
+  "bug_report",
+  "staff_application",
+  "billing",
+  "account_issues",
+  "rank_issues",
+  "suggestions",
+]);
 export const ticketPriorityEnum = pgEnum("ticket_priority", ["low", "medium", "high", "urgent"]);
 
 export const ticketsTable = pgTable("tickets", {

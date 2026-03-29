@@ -86,19 +86,21 @@ router.post("/users/:id/unban", async (req, res) => {
 
 router.post("/store/items", async (req, res) => {
   try {
-    const { name, description, category, price, currency, imageUrl, features, isActive, isFeatured, badge, badgeColor } = req.body;
+    const { name, description, category, price, currency, imageUrl, images, features, isActive, isFeatured, badge, badgeColor, sortOrder } = req.body;
     const id = generateId();
     const [item] = await db.insert(storeItemsTable).values({
       id, name, description,
       category: category as any,
       price: Number(price),
-      currency: (currency as any) || "owo",
+      currency: (currency as any) || "usd",
       imageUrl: imageUrl || null,
+      images: images || [],
       features: features || [],
       isActive: isActive !== false,
       isFeatured: isFeatured || false,
       badge: badge || null,
       badgeColor: badgeColor || null,
+      sortOrder: Number(sortOrder) || 0,
     }).returning();
     res.json(item);
   } catch (err) {
@@ -109,18 +111,20 @@ router.post("/store/items", async (req, res) => {
 
 router.put("/store/items/:id", async (req, res) => {
   try {
-    const { name, description, category, price, currency, imageUrl, features, isActive, isFeatured, badge, badgeColor } = req.body;
+    const { name, description, category, price, currency, imageUrl, images, features, isActive, isFeatured, badge, badgeColor, sortOrder } = req.body;
     const [item] = await db.update(storeItemsTable).set({
       name, description,
       category: category as any,
       price: Number(price),
-      currency: (currency as any) || "owo",
+      currency: (currency as any) || "usd",
       imageUrl: imageUrl || null,
+      images: images || [],
       features: features || [],
       isActive: isActive !== false,
       isFeatured: isFeatured || false,
       badge: badge || null,
       badgeColor: badgeColor || null,
+      sortOrder: Number(sortOrder) || 0,
       updatedAt: new Date(),
     }).where(eq(storeItemsTable.id, req.params.id)).returning();
     res.json(item);

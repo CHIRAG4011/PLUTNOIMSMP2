@@ -3088,3 +3088,80 @@ export function useGetAnnouncements<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+import type { ProductReview, CreateReviewRequest } from "./api.schemas";
+
+export const getProductReviewsUrl = (itemId: string) => `/api/store/items/${itemId}/reviews`;
+
+export const getProductReviews = async (itemId: string, options?: RequestInit): Promise<ProductReview[]> => {
+  return customFetch<ProductReview[]>(getProductReviewsUrl(itemId), { ...options, method: "GET" });
+};
+
+export const getGetProductReviewsQueryKey = (itemId: string) => [`/api/store/items/${itemId}/reviews`] as const;
+
+export const getGetProductReviewsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProductReviews>>,
+  TError = ErrorType<unknown>,
+>(
+  itemId: string,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getProductReviews>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetProductReviewsQueryKey(itemId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getProductReviews>>> = ({ signal }) =>
+    getProductReviews(itemId, { signal, ...requestOptions });
+  return { queryKey, queryFn, enabled: !!itemId, ...queryOptions };
+};
+
+export function useGetProductReviews<
+  TData = Awaited<ReturnType<typeof getProductReviews>>,
+  TError = ErrorType<unknown>,
+>(
+  itemId: string,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getProductReviews>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProductReviewsQueryOptions(itemId, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const createProductReview = async (
+  itemId: string,
+  data: CreateReviewRequest,
+  options?: RequestInit,
+): Promise<ProductReview> => {
+  return customFetch<ProductReview>(`/api/store/items/${itemId}/reviews`, {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(options?.headers || {}) },
+    body: JSON.stringify(data),
+  });
+};
+
+export function useCreateProductReview<TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProductReview>>,
+    TError,
+    { itemId: string; data: CreateReviewRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createProductReview>>,
+  TError,
+  { itemId: string; data: CreateReviewRequest },
+  TContext
+> {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createProductReview>>,
+    { itemId: string; data: CreateReviewRequest }
+  > = ({ itemId, data }) => createProductReview(itemId, data, requestOptions);
+  return useMutation({ mutationFn, ...mutationOptions });
+}

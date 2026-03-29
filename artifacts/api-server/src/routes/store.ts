@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { storeItemsTable, purchasesTable, usersTable, couponsTable, otpsTable } from "@workspace/db";
-import { eq, and, inArray, gt } from "drizzle-orm";
+import { storeItemsTable, purchasesTable, usersTable, couponsTable, otpsTable, productReviewsTable } from "@workspace/db";
+import { eq, and, inArray, gt, ilike, or } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../lib/auth.js";
 import { generateId } from "../lib/id.js";
 import { sendOrderConfirmationEmail, sendCheckoutOtpEmail } from "../lib/email.js";
@@ -10,16 +10,28 @@ const router = Router();
 
 router.get("/items", async (req, res) => {
   try {
-    const { category } = req.query;
-    let items;
+    const { category, search } = req.query;
+    const conditions: any[] = [eq(storeItemsTable.isActive, true)];
+
     if (category && typeof category === "string" && category !== "all") {
-      items = await db.select().from(storeItemsTable).where(
-        and(eq(storeItemsTable.isActive, true), eq(storeItemsTable.category, category as any))
-      );
-    } else {
-      items = await db.select().from(storeItemsTable).where(eq(storeItemsTable.isActive, true));
+      conditions.push(eq(storeItemsTable.category, category as any));
     }
-    items.sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0));
+
+    if (search && typeof search === "string" && search.trim()) {
+      const term = search.trim();
+      conditions.push(
+        or(
+          ilike(storeItemsTable.name, `%${term}%`),
+          ilike(storeItemsTable.description, `%${term}%`)
+        )
+      );
+    }
+
+    const items = await db.select().from(storeItemsTable).where(and(...conditions));
+    items.sort((a, b) => {
+      if (b.isFeatured !== a.isFeatured) return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+      return (b.sortOrder || 0) - (a.sortOrder || 0);
+    });
     res.json(items);
   } catch (err) {
     req.log.error(err);
@@ -35,6 +47,49 @@ router.get("/items/:id", async (req, res) => {
       return;
     }
     res.json(item);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/items/:id/reviews", async (req, res) => {
+  try {
+    const reviews = await db.select().from(productReviewsTable)
+      .where(eq(productReviewsTable.itemId, req.params.id))
+      .orderBy(productReviewsTable.createdAt);
+    res.json(reviews);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/items/:id/reviews", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { rating, comment } = req.body;
+    if (!rating || rating < 1 || rating > 5) {
+      res.status(400).json({ error: "Rating must be 1–5" });
+      return;
+    }
+    if (!comment || !comment.trim()) {
+      res.status(400).json({ error: "Comment is required" });
+      return;
+    }
+    const [item] = await db.select().from(storeItemsTable).where(eq(storeItemsTable.id, req.params.id)).limit(1);
+    if (!item) {
+      res.status(404).json({ error: "Item not found" });
+      return;
+    }
+    const [review] = await db.insert(productReviewsTable).values({
+      id: generateId(),
+      itemId: req.params.id,
+      userId: req.user!.id,
+      username: req.user!.username,
+      rating: Number(rating),
+      comment: comment.trim(),
+    }).returning();
+    res.json(review);
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });

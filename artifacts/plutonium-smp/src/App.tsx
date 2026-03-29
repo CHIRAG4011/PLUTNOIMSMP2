@@ -11,6 +11,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 
 import Home from "@/pages/home";
 import Store from "@/pages/store";
+import StoreItemDetail from "@/pages/store/[id]";
 import Cart from "@/pages/cart";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
@@ -36,6 +37,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/store" component={Store} />
+      <Route path="/store/:id" component={StoreItemDetail} />
       <Route path="/cart" component={Cart} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />

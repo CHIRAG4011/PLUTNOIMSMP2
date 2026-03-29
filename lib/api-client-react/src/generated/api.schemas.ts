@@ -111,6 +111,10 @@ export const StoreItemCategory = {
   crate_keys: "crate_keys",
   coins: "coins",
   cosmetics: "cosmetics",
+  bundles: "bundles",
+  boosts: "boosts",
+  seasonal: "seasonal",
+  permissions: "permissions",
 } as const;
 
 export type StoreItemCurrency =
@@ -129,11 +133,13 @@ export interface StoreItem {
   price: number;
   currency: StoreItemCurrency;
   imageUrl?: string;
+  images?: string[];
   features?: string[];
   isActive: boolean;
   isFeatured: boolean;
   badge?: string;
   badgeColor?: string;
+  sortOrder?: number;
   createdAt: string;
 }
 
@@ -144,11 +150,28 @@ export interface CreateStoreItemRequest {
   price: number;
   currency: string;
   imageUrl?: string;
+  images?: string[];
   features?: string[];
   isActive?: boolean;
   isFeatured?: boolean;
   badge?: string;
   badgeColor?: string;
+  sortOrder?: number;
+}
+
+export interface ProductReview {
+  id: string;
+  itemId: string;
+  userId: string;
+  username: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+export interface CreateReviewRequest {
+  rating: number;
+  comment: string;
 }
 
 export interface PurchaseRequest {
@@ -187,6 +210,13 @@ export const TicketCategory = {
   purchase_issues: "purchase_issues",
   report_player: "report_player",
   general: "general",
+  ban_appeal: "ban_appeal",
+  bug_report: "bug_report",
+  staff_application: "staff_application",
+  billing: "billing",
+  account_issues: "account_issues",
+  rank_issues: "rank_issues",
+  suggestions: "suggestions",
 } as const;
 
 export type TicketStatus = (typeof TicketStatus)[keyof typeof TicketStatus];
@@ -352,6 +382,7 @@ export interface Role {
 
 export type GetStoreItemsParams = {
   category?: string;
+  search?: string;
 };
 
 export type AdminGetUsersParams = {
