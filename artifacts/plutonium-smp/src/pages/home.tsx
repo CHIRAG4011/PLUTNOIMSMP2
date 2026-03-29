@@ -11,36 +11,36 @@ const SERVER_IP = "play.plutoniumsmp.fun";
 
 const VOTE_SITES = [
   {
+    name: "TopG",
+    url: "https://topg.org/minecraft-servers/server-680957",
+    icon: "https://topg.org/favicon.ico",
+    reward: "+500 OWO Coins",
+    color: "hover:border-yellow-500/50 hover:shadow-[0_0_16px_rgba(234,179,8,0.2)]",
+    badge: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+  },
+  {
+    name: "Minecraft Server List",
+    url: "https://minecraft-server-list.com/server/518991/",
+    icon: "https://minecraft-server-list.com/favicon.ico",
+    reward: "+500 OWO Coins",
+    color: "hover:border-orange-500/50 hover:shadow-[0_0_16px_rgba(249,115,22,0.2)]",
+    badge: "bg-orange-500/10 text-orange-400 border-orange-500/30",
+  },
+  {
     name: "Minecraft-MP",
-    url: "https://minecraft-mp.com/server/plutoniumsmp/vote",
+    url: "https://minecraft-mp.com/server-s356241",
     icon: "https://minecraft-mp.com/favicon.ico",
     reward: "+500 OWO Coins",
     color: "hover:border-green-500/50 hover:shadow-[0_0_16px_rgba(34,197,94,0.2)]",
     badge: "bg-green-500/10 text-green-400 border-green-500/30",
   },
   {
-    name: "Planet Minecraft",
-    url: "https://www.planetminecraft.com/server/plutoniumsmp",
-    icon: "https://www.planetminecraft.com/favicon.ico",
-    reward: "+500 OWO Coins",
-    color: "hover:border-orange-500/50 hover:shadow-[0_0_16px_rgba(249,115,22,0.2)]",
-    badge: "bg-orange-500/10 text-orange-400 border-orange-500/30",
-  },
-  {
-    name: "MinecraftServers.org",
-    url: "https://minecraftservers.org/vote/plutoniumsmp",
-    icon: "https://minecraftservers.org/favicon.ico",
+    name: "Minecraft.Buzz",
+    url: "https://minecraft.buzz/server/20060",
+    icon: "https://minecraft.buzz/favicon.ico",
     reward: "+500 OWO Coins",
     color: "hover:border-blue-500/50 hover:shadow-[0_0_16px_rgba(59,130,246,0.2)]",
     badge: "bg-blue-500/10 text-blue-400 border-blue-500/30",
-  },
-  {
-    name: "TopMinecraft",
-    url: "https://topminecraft.com/vote/plutoniumsmp",
-    icon: "https://topminecraft.com/favicon.ico",
-    reward: "+500 OWO Coins",
-    color: "hover:border-purple-500/50 hover:shadow-[0_0_16px_rgba(139,92,246,0.2)]",
-    badge: "bg-purple-500/10 text-purple-400 border-purple-500/30",
   },
 ];
 
