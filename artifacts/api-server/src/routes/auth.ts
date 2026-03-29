@@ -281,12 +281,21 @@ router.get("/discord/callback", async (req, res) => {
   const redirectUri = `${base}/api/auth/discord/callback`;
   const frontendUrl = base;
 
+  req.log.info({ query: req.query, redirectUri, frontendUrl }, "Discord OAuth callback received");
+
   if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET) {
+    req.log.warn("Discord OAuth not configured (missing client id/secret)");
     res.redirect(`${frontendUrl}/login?error=discord_not_configured`);
     return;
   }
-  const { code } = req.query;
+  const { code, error: discordError } = req.query;
+  if (discordError) {
+    req.log.warn({ discordError }, "Discord returned error in callback");
+    res.redirect(`${frontendUrl}/login?error=discord_cancelled`);
+    return;
+  }
   if (!code || typeof code !== "string") {
+    req.log.warn({ code }, "No code received in Discord callback");
     res.redirect(`${frontendUrl}/login?error=discord_cancelled`);
     return;
   }
@@ -305,7 +314,9 @@ router.get("/discord/callback", async (req, res) => {
     });
 
     const tokenData = await tokenRes.json() as any;
+    req.log.info({ hasAccessToken: !!tokenData.access_token, tokenError: tokenData.error, redirectUri }, "Discord token exchange result");
     if (!tokenData.access_token) {
+      req.log.warn({ tokenData }, "Discord token exchange failed");
       res.redirect(`${frontendUrl}/login?error=discord_token_failed`);
       return;
     }

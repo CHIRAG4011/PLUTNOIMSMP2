@@ -115,7 +115,7 @@ export default function Login() {
   };
 
   const handleDiscordLogin = () => {
-    window.open("/api/auth/discord", "_blank", "noopener,noreferrer");
+    window.location.href = "/api/auth/discord";
   };
 
   return (
