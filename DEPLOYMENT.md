@@ -1,331 +1,389 @@
 # Plutonium SMP — Vercel Deployment Guide
 
-> **Zero commands.** Everything is done through web dashboards.
-> The whole process takes about 15 minutes.
+> **No terminal commands needed.** Everything is done through browser dashboards.
+> Estimated time: 15–20 minutes.
 
 ---
 
-## Overview
+## Quick Reference — Exact Vercel Settings
 
-You will deploy **two separate Vercel projects** — the API and the frontend — plus connect a **MongoDB Atlas** database.
+Use these exact values when configuring each Vercel project. **Do not guess — these must match exactly.**
 
-| What | Where | URL you'll get |
-|---|---|---|
-| API Server | `artifacts/api-server` | `https://plutonium-api.vercel.app` |
-| Frontend | `artifacts/plutonium-smp` | `https://plutonium-smp.vercel.app` |
-| Database | MongoDB Atlas (free) | Connection string only |
+### Project 1: API Server
+
+| Setting | Value |
+|---|---|
+| **Root Directory** | `artifacts/api-server` |
+| **Framework Preset** | **Other** |
+| **Build Command** | *(leave blank — auto-handled)* |
+| **Output Directory** | *(leave blank — auto-handled)* |
+| **Install Command** | `cd ../.. && pnpm install --frozen-lockfile` |
+
+### Project 2: Frontend
+
+| Setting | Value |
+|---|---|
+| **Root Directory** | `artifacts/plutonium-smp` |
+| **Framework Preset** | **Vite** |
+| **Build Command** | `pnpm run build` |
+| **Output Directory** | `dist/public` |
+| **Install Command** | `cd ../.. && pnpm install --frozen-lockfile` |
+
+---
+
+## Deployment Checklist
+
+- [ ] Code is pushed to GitHub
+- [ ] MongoDB Atlas cluster created and connection string copied
+- [ ] API project deployed on Vercel
+- [ ] Frontend project deployed on Vercel
+- [ ] `APP_URL` on API matches the actual deployed API URL
+- [ ] `VITE_API_URL` on frontend points to the API URL
+- [ ] `ALLOWED_ORIGINS` on API includes the frontend URL
+- [ ] Database seeded (admin account + store items created)
 
 ---
 
 ## Step 1 — Push your code to GitHub
 
-Before deploying, your code must be on GitHub (Vercel reads from it automatically).
+Vercel deploys directly from GitHub. Your code must be there first.
 
 1. Go to [github.com/new](https://github.com/new)
-2. Create a new **private** repository — name it anything (e.g. `plutonium-smp`)
-3. In Replit's Shell tab, run:
-   - `git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git`
-   - `git push -u origin main`
+2. Create a **private** repository (name it e.g. `plutonium-smp`)
+3. In **Replit's Shell** tab, run these two commands:
+   ```
+   git remote add origin https://github.com/YOUR_USERNAME/REPO_NAME.git
+   git push -u origin main
+   ```
 
-> If you already have a GitHub repo connected, skip this step.
+> If you already have a connected GitHub repo, skip this step.
 
 ---
 
 ## Step 2 — Set up MongoDB Atlas (free database)
 
-MongoDB Atlas provides a free forever tier — no credit card required.
+MongoDB Atlas has a **free forever tier** — no credit card required.
 
-### 2.1 Create your account & cluster
+### 2.1 — Create an account and cluster
 
-1. Go to [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas) → click **Try Free**
-2. Sign up with Google or email
-3. On the **Deploy your cluster** screen:
-   - Choose **M0 Free** tier
-   - Pick any cloud provider and region (closest to your users)
-   - Name your cluster anything (e.g. `plutonium`)
+1. Open [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas) → click **Try Free**
+2. Sign up with Google or create an account
+3. On the **Deploy your cluster** screen that appears:
+   - Select **M0** (the free tier)
+   - Pick any cloud provider + region
+   - Name the cluster anything (e.g. `plutonium`)
    - Click **Create Deployment**
 
-### 2.2 Create a database user
+### 2.2 — Create a database user
 
-After the cluster is created, a dialog appears to create a user:
+A popup appears asking you to create a user for this cluster:
 
-1. **Username**: `plutoniumadmin` (or anything you like)
-2. **Password**: click **Autogenerate Secure Password** → copy it somewhere safe
+1. Set **Username** to something like `plutoniumadmin`
+2. Click **Autogenerate Secure Password** — copy and save this password now
 3. Click **Create Database User**
-4. Click **Choose a connection method** at the bottom
+4. Click **Choose a connection method** at the bottom right
 
-### 2.3 Allow all IP addresses
+### 2.3 — Allow all IP addresses
 
-1. In the **Network Access** section that appears, click **Add IP Address**
-2. Click **Allow Access from Anywhere** (adds `0.0.0.0/0`)
-3. Click **Confirm**
+Vercel uses dynamic IPs, so you must allow connections from anywhere:
 
-> This is required for Vercel's serverless functions, which use dynamic IP addresses.
+1. Click **Network Access** in the left sidebar (or it may appear as a step)
+2. Click **Add IP Address**
+3. Click **Allow Access from Anywhere** → this fills in `0.0.0.0/0`
+4. Click **Confirm**
 
-### 2.4 Get your connection string
+### 2.4 — Get your connection string
 
-1. Click **Connect** on your cluster
+1. Click **Connect** on your cluster card
 2. Choose **Drivers**
-3. Select **Node.js** as the driver
-4. Copy the connection string — it looks like:
+3. Select **Node.js** as the driver (version 5.5+)
+4. Copy the string shown — it looks like this:
    ```
    mongodb+srv://plutoniumadmin:<password>@cluster0.abc12.mongodb.net/?retryWrites=true&w=majority
    ```
 5. Replace `<password>` with the password you saved in step 2.2
-6. Add your database name before the `?`:
+6. Add the database name `plutonium` before the `?`:
    ```
    mongodb+srv://plutoniumadmin:YOURPASSWORD@cluster0.abc12.mongodb.net/plutonium?retryWrites=true&w=majority
    ```
 
-**Save this full string — you'll paste it into Vercel in the next steps.**
+**Keep this full string ready — you will paste it into Vercel in the next step.**
 
 ---
 
 ## Step 3 — Deploy the API Server
 
-### 3.1 Create the Vercel project
+### 3.1 — Create a new Vercel project
 
-1. Go to [vercel.com](https://vercel.com) → log in (or sign up free)
+1. Go to [vercel.com](https://vercel.com) → sign up or log in (free)
 2. Click **Add New… → Project**
-3. Connect your GitHub account if you haven't yet
-4. Find your repository and click **Import**
+3. Connect your GitHub account when prompted
+4. Find your repository in the list → click **Import**
 
-### 3.2 Configure the project settings
+### 3.2 — Configure the project
 
-On the configuration screen, change these settings:
+You will see a configuration screen. Fill it in **exactly** as follows:
 
-| Setting | Value |
+| Field | What to type |
 |---|---|
-| **Project Name** | `plutonium-api` (or anything with "api" in the name) |
-| **Root Directory** | `artifacts/api-server` ← **click Edit and type this** |
-| **Framework Preset** | Other |
-| **Build Command** | `pnpm run build` |
-| **Output Directory** | `dist` |
-| **Install Command** | `pnpm install --frozen-lockfile` |
+| **Project Name** | `plutonium-api` |
+| **Root Directory** | Click the **Edit** pencil → type `artifacts/api-server` → click **Continue** |
+| **Framework Preset** | Select **Other** from the dropdown |
+| **Build Command** | Leave blank (the `vercel.json` handles the build automatically) |
+| **Output Directory** | Leave blank |
+| **Install Command** | Override to: `cd ../.. && pnpm install --frozen-lockfile` |
 
-> **Root Directory is the most important setting.** Click the pencil/Edit icon next to it and type `artifacts/api-server` exactly.
+> **Root Directory is critical.** Without it, Vercel deploys the wrong folder.
 
-### 3.3 Add environment variables
+### 3.3 — Add environment variables
 
-Scroll down to the **Environment Variables** section. Add each of these one by one:
+Expand the **Environment Variables** section and add these one by one:
 
-#### Required — Must set before deploying
+#### Database + Auth (required before first deploy)
 
-| Name | Value | Notes |
-|---|---|---|
-| `MONGODB_URI` | `mongodb+srv://...` | Your full connection string from Step 2.4 |
-| `SESSION_SECRET` | (random string) | Go to [randomstring.net](https://www.random.org/strings/?num=1&len=64&digits=on&upperalpha=on&loweralpha=on&unique=on&format=html&rng=new) and paste a 64-char random string |
-| `APP_URL` | `https://plutonium-api.vercel.app` | Use your actual project name — this is the URL Vercel will give you |
-| `ALLOWED_ORIGINS` | `https://plutonium-smp.vercel.app` | Your frontend URL (you'll create this in Step 4) |
-| `NODE_ENV` | `production` | |
-
-#### Email — Add at least one
-
-**Option A (recommended): Resend**
-
-| Name | Value |
+| Variable Name | Value |
 |---|---|
-| `RESEND_API_KEY` | Your key from [resend.com](https://resend.com) |
+| `MONGODB_URI` | Your full Atlas connection string from Step 2.4 |
+| `SESSION_SECRET` | A random 64-character string — generate one at [generate.plus/string](https://generate.plus/en/random-string) |
+| `NODE_ENV` | `production` |
+| `APP_URL` | `https://plutonium-api.vercel.app` — use your actual project name here |
+| `ALLOWED_ORIGINS` | `https://plutonium-smp.vercel.app` — your frontend URL (you'll create it in Step 4) |
+
+> Note: You can update `APP_URL` and `ALLOWED_ORIGINS` after deploying once you know the real URLs.
+
+#### Email — choose one option
+
+**Resend (recommended — free tier, easy setup)**
+
+Sign up at [resend.com](https://resend.com), create an API key, then add:
+
+| Variable Name | Value |
+|---|---|
+| `RESEND_API_KEY` | Your API key from Resend |
 | `SMTP_FROM` | `Plutonium SMP <noreply@yourdomain.com>` |
 
-**Option B: Gmail SMTP**
+**Gmail SMTP (if you don't want to use Resend)**
 
-| Name | Value |
+First create a Gmail App Password: Google Account → Security → 2-Step Verification → App passwords
+
+| Variable Name | Value |
 |---|---|
 | `SMTP_HOST` | `smtp.gmail.com` |
 | `SMTP_PORT` | `587` |
 | `SMTP_USER` | `your@gmail.com` |
-| `SMTP_PASS` | Your Gmail App Password ([how to create one](https://support.google.com/accounts/answer/185833)) |
+| `SMTP_PASS` | Your Gmail App Password (16 characters, no spaces) |
 | `SMTP_FROM` | `Plutonium SMP <your@gmail.com>` |
 
-#### Optional — Discord OAuth (add later if needed)
+#### Discord OAuth (optional — add later if you want Discord login)
 
-| Name | Value |
+| Variable Name | Value |
 |---|---|
-| `DISCORD_CLIENT_ID` | From [discord.com/developers](https://discord.com/developers/applications) |
+| `DISCORD_CLIENT_ID` | From [discord.com/developers/applications](https://discord.com/developers/applications) |
 | `DISCORD_CLIENT_SECRET` | From the same page |
 
-### 3.4 Deploy
+### 3.4 — Deploy
 
-Click **Deploy** and wait ~2 minutes for the build to finish.
+Click **Deploy**. The build takes 1–3 minutes.
 
-> After it deploys, copy the URL Vercel gives you (e.g. `https://plutonium-api.vercel.app`).
-> Go to **Settings → Environment Variables** and make sure `APP_URL` matches this URL exactly.
-> If it doesn't match, update it and click **Redeploy**.
+When it finishes, Vercel shows you a URL like `https://plutonium-api.vercel.app`.
+
+**Copy this URL.** If it doesn't match what you typed for `APP_URL`:
+1. Go to **Settings → Environment Variables**
+2. Update `APP_URL` to the exact URL Vercel gave you
+3. Click **Redeploy → Redeploy** (no need to clear build cache)
 
 ---
 
 ## Step 4 — Deploy the Frontend
 
-### 4.1 Create another Vercel project
+### 4.1 — Create another Vercel project
 
-1. In Vercel, click **Add New… → Project** again
-2. Select the **same repository**
+1. In Vercel, click **Add New… → Project**
+2. Select the **same GitHub repository**
 
-### 4.2 Configure the project settings
+### 4.2 — Configure the project
 
-| Setting | Value |
+| Field | What to type |
 |---|---|
 | **Project Name** | `plutonium-smp` |
-| **Root Directory** | `artifacts/plutonium-smp` ← **click Edit and type this** |
-| **Framework Preset** | Vite |
+| **Root Directory** | Click **Edit** → type `artifacts/plutonium-smp` → click **Continue** |
+| **Framework Preset** | **Vite** |
 | **Build Command** | `pnpm run build` |
-| **Output Directory** | `dist` |
-| **Install Command** | `pnpm install --frozen-lockfile` |
+| **Output Directory** | `dist/public` |
+| **Install Command** | Override to: `cd ../.. && pnpm install --frozen-lockfile` |
 
-### 4.3 Add environment variables
+### 4.3 — Add environment variables
 
-| Name | Value | Notes |
-|---|---|---|
-| `VITE_API_URL` | `https://plutonium-api.vercel.app` | Your API URL from Step 3 — no trailing slash |
+| Variable Name | Value |
+|---|---|
+| `VITE_API_URL` | `https://plutonium-api.vercel.app` — your API URL from Step 3 (no trailing slash) |
 
-### 4.4 Deploy
+### 4.4 — Deploy
 
-Click **Deploy** and wait ~1 minute.
+Click **Deploy**. The frontend build takes about 1 minute.
 
 ---
 
-## Step 5 — Seed the database with initial data
+## Step 5 — Link the two projects together
 
-After both are deployed, seed the database so your store items, leaderboard, and admin account are created.
+After both are deployed, make sure they point to each other correctly.
 
-1. In Vercel, open your **API project** (plutonium-api)
-2. Go to **Settings → Environment Variables**
-3. Confirm `MONGODB_URI` is set correctly
-4. Go to the **Functions** tab → you should see your API routes listed
+### On the API project (plutonium-api)
 
-To run the seed, call this URL in your browser once:
+Go to **Settings → Environment Variables** and verify:
 
+| Variable | Should be |
+|---|---|
+| `APP_URL` | The exact URL of your API (e.g. `https://plutonium-api.vercel.app`) |
+| `ALLOWED_ORIGINS` | The exact URL of your frontend (e.g. `https://plutonium-smp.vercel.app`) |
+
+If you changed either, click **Redeploy** on the API project.
+
+### On the Frontend project (plutonium-smp)
+
+| Variable | Should be |
+|---|---|
+| `VITE_API_URL` | The exact URL of your API |
+
+---
+
+## Step 6 — Seed the database
+
+The database is empty on first deploy. Seeding creates:
+- Your admin account (`admin@plutoniumsmp.net` / `admin123`)
+- Default store items (ranks, crates, coins)
+- Leaderboard entries and announcements
+
+In **Replit's Shell** tab, run:
 ```
-https://YOUR-API-URL.vercel.app/api/health
+MONGODB_URI="paste-your-atlas-uri-here" pnpm --filter @workspace/scripts run seed
 ```
 
-> The seed script creates the default admin account automatically on first startup:
-> - Email: `admin@plutoniumsmp.net`
-> - Password: `admin123`
-> **Change the password immediately after first login.**
+Replace the URI with your full Atlas connection string from Step 2.4.
 
-Actually, to seed: in Replit's shell, run `MONGODB_URI="your-atlas-uri" pnpm --filter @workspace/scripts run seed` once.
+**After seeding, log in at `/login` with `admin@plutoniumsmp.net` / `admin123` and change the password immediately.**
 
 ---
 
-## Step 6 — Verify everything works
-
-Visit your frontend URL and check each feature:
-
-- [ ] Home page loads (server status, announcements)
-- [ ] Register a new account (you'll receive a verification email)
-- [ ] Login works
-- [ ] Store page shows items
-- [ ] Admin panel works at `/admin/dashboard` (login with `admin@plutoniumsmp.net`)
-
----
-
-## Step 7 — Discord OAuth (optional)
+## Step 7 — Set up Discord OAuth (optional)
 
 Only needed if you want the "Login with Discord" button to work.
 
-### 7.1 Create a Discord application
+### 7.1 — Create a Discord application
 
 1. Go to [discord.com/developers/applications](https://discord.com/developers/applications)
-2. Click **New Application** → name it `Plutonium SMP` → Create
+2. Click **New Application** → name it `Plutonium SMP` → click **Create**
 3. In the left sidebar, click **OAuth2**
 
-### 7.2 Add redirect URIs
+### 7.2 — Add the redirect URI
 
-Under **Redirects**, click **Add Redirect** and add:
+Under **Redirects**, click **Add Redirect** and enter:
 
 ```
-https://YOUR-API-URL.vercel.app/api/auth/discord/callback
+https://plutonium-api.vercel.app/api/auth/discord/callback
 ```
+
+(Replace with your actual API URL if different)
 
 Click **Save Changes**.
 
-### 7.3 Copy credentials
+### 7.3 — Copy your credentials
 
-- **Client ID** — visible at the top of the OAuth2 page
-- **Client Secret** — click **Reset Secret**, confirm, copy it
+On the same OAuth2 page:
+- **Client ID** — visible near the top, click the copy icon
+- **Client Secret** — click **Reset Secret** → confirm → copy it
 
-### 7.4 Add to Vercel
+### 7.4 — Add to Vercel
 
-In your API Vercel project → **Settings → Environment Variables**, add:
+In your API Vercel project → **Settings → Environment Variables**:
 
-| Name | Value |
+| Variable | Value |
 |---|---|
-| `DISCORD_CLIENT_ID` | (paste Client ID) |
-| `DISCORD_CLIENT_SECRET` | (paste Client Secret) |
+| `DISCORD_CLIENT_ID` | Paste your Client ID |
+| `DISCORD_CLIENT_SECRET` | Paste your Client Secret |
 
-Then click **Redeploy** → **Redeploy** (without clearing build cache) on the API project.
+Then: **Deployments → three-dot menu on latest deployment → Redeploy**
 
 ---
 
-## Custom Domain (optional)
+## Step 8 — Custom Domain (optional)
 
 To use `api.plutoniumsmp.net` and `plutoniumsmp.net`:
 
 1. In each Vercel project → **Settings → Domains** → **Add Domain**
-2. Enter your domain and follow Vercel's DNS instructions
-3. After domains are live, update these variables:
-   - API project: `APP_URL` = `https://api.plutoniumsmp.net`
-   - Frontend project: `VITE_API_URL` = `https://api.plutoniumsmp.net`
-   - API project: `ALLOWED_ORIGINS` = `https://plutoniumsmp.net`
-   - Discord portal: update the redirect URI to the new API domain
-4. Redeploy both projects
+2. Enter your domain and follow Vercel's DNS instructions (it tells you exactly which DNS records to add)
+3. After the domain is active, update variables:
+
+**On the API project:**
+
+| Variable | New Value |
+|---|---|
+| `APP_URL` | `https://api.plutoniumsmp.net` |
+| `ALLOWED_ORIGINS` | `https://plutoniumsmp.net` |
+
+**On the Frontend project:**
+
+| Variable | New Value |
+|---|---|
+| `VITE_API_URL` | `https://api.plutoniumsmp.net` |
+
+**On Discord portal:** Update the redirect URI to `https://api.plutoniumsmp.net/api/auth/discord/callback`
+
+Redeploy both projects after updating variables.
 
 ---
 
-## Environment Variables — Full Reference
+## All Environment Variables — Full Reference
 
 ### API Server (plutonium-api project)
 
 | Variable | Required | Description |
 |---|---|---|
 | `MONGODB_URI` | **Yes** | MongoDB Atlas connection string |
-| `SESSION_SECRET` | **Yes** | 64-character random string for JWT signing |
-| `APP_URL` | **Yes** | Public URL of this API (no trailing slash) |
+| `SESSION_SECRET` | **Yes** | 64-char random string — never change after going live |
+| `APP_URL` | **Yes** | Public URL of this API, no trailing slash |
 | `ALLOWED_ORIGINS` | **Yes** | Frontend URL for CORS |
-| `NODE_ENV` | **Yes** | Set to `production` |
+| `NODE_ENV` | **Yes** | `production` |
 | `DISCORD_CLIENT_ID` | Optional | Discord app Client ID |
 | `DISCORD_CLIENT_SECRET` | Optional | Discord app Client Secret |
-| `RESEND_API_KEY` | Email | Resend API key (preferred) |
-| `SMTP_HOST` | Email | SMTP server (e.g. `smtp.gmail.com`) |
-| `SMTP_PORT` | Email | Usually `587` |
-| `SMTP_USER` | Email | SMTP username / email |
-| `SMTP_PASS` | Email | SMTP password or app password |
-| `SMTP_FROM` | Email | Sender name + address |
-| `LOG_LEVEL` | No | `info` (default), `debug`, `warn`, `error` |
+| `RESEND_API_KEY` | Email | Resend API key (preferred email method) |
+| `SMTP_HOST` | Email | e.g. `smtp.gmail.com` |
+| `SMTP_PORT` | Email | `587` |
+| `SMTP_USER` | Email | Your email address |
+| `SMTP_PASS` | Email | App password |
+| `SMTP_FROM` | Email | Sender display name and address |
+| `LOG_LEVEL` | No | `info` (default). Options: `trace` `debug` `info` `warn` `error` |
 
 ### Frontend (plutonium-smp project)
 
 | Variable | Required | Description |
 |---|---|---|
-| `VITE_API_URL` | **Yes** | Full URL of the API server |
+| `VITE_API_URL` | **Yes** | Full URL of the API server, no trailing slash |
 
 ---
 
 ## Troubleshooting
 
-### API fails to start — "MONGODB_URI is not set"
-Go to your API Vercel project → **Settings → Environment Variables** → confirm `MONGODB_URI` is set and has no typos. Redeploy.
+### "MONGODB_URI is not set" — API crashes on startup
+Go to the API Vercel project → **Settings → Environment Variables** → confirm `MONGODB_URI` is set. Check for copy-paste errors (no extra spaces, password replaced correctly). Redeploy.
+
+### API works but returns errors for every request
+Check Vercel's **Functions** tab for logs. Usually this means `MONGODB_URI` is wrong or the Atlas cluster's Network Access is blocking the IP. Make sure `0.0.0.0/0` is in your Atlas Network Access list.
+
+### Frontend shows "Network Error" / requests fail
+- `VITE_API_URL` on the frontend does not point to your API URL — fix and redeploy
+- `ALLOWED_ORIGINS` on the API does not include your frontend URL — fix and redeploy
 
 ### "redirect_uri_mismatch" on Discord login
-The redirect URI in the Discord developer portal doesn't match. Check that:
-- `APP_URL` in Vercel equals your exact API URL (no trailing slash, correct `https`)
-- The Discord portal has exactly `APP_URL + /api/auth/discord/callback`
+The redirect URI in the Discord portal doesn't match exactly. Verify:
+- `APP_URL` has no trailing slash
+- Discord portal has exactly: `[APP_URL]/api/auth/discord/callback`
 
-### Frontend shows "Network Error" or API calls fail
-- Check `VITE_API_URL` is set on the frontend project and points to the API
-- Check `ALLOWED_ORIGINS` on the API includes the frontend URL
-- Both changes require a redeploy
+### Blank white page on the frontend
+The SPA routing isn't set up. The `vercel.json` inside `artifacts/plutonium-smp` handles this automatically — make sure you set Root Directory to `artifacts/plutonium-smp` and not the repo root.
 
-### Blank page on the frontend
-Vercel needs to serve `index.html` for all routes (SPA routing). The `vercel.json` inside `artifacts/plutonium-smp` handles this automatically — make sure you didn't delete it.
+### Users get logged out every time you redeploy
+`SESSION_SECRET` changed. Set it to a fixed, long random value and never rotate it unless you want to invalidate all sessions.
 
-### "Invalid token" — users get logged out after every deploy
-`SESSION_SECRET` changed. Set it to a fixed value in Vercel environment variables and never change it.
-
-### Store / leaderboard is empty after deploying
-The database is empty on a fresh MongoDB cluster. Run the seed script once from Replit's shell:
-```
-MONGODB_URI="your-atlas-uri" pnpm --filter @workspace/scripts run seed
-```
+### Store / leaderboard / announcements are empty
+Run the seed script from Replit's Shell (Step 6 above). MongoDB collections are created automatically — no migrations needed.
