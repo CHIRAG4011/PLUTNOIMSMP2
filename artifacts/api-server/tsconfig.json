@@ -6,7 +6,7 @@
     "types": ["node"],
     "composite": true
   },
-  "include": ["src"],
+  "include": ["."],
   "references": [
     {
       "path": "../../lib/db"
